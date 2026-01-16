@@ -10,7 +10,14 @@ public class ServerinfoModule : InteractionModuleBase<SocketInteractionContext>
     [SlashCommand("serverinfo", "View current server information")]
     public async Task ServerInfoAsync()
     {
-        var guild = Context.Guild;
+        // Get guild from GuildId if Context.Guild is null (cache issue)
+        SocketGuild? guild = Context.Guild;
+        
+        if (guild == null && Context.Interaction.GuildId.HasValue)
+        {
+            guild = Context.Client.GetGuild(Context.Interaction.GuildId.Value);
+        }
+        
         if (guild == null)
         {
             await RespondAsync("❌ This command can only be used in a server.", ephemeral: true);

@@ -14,7 +14,7 @@ public class RemindModule : InteractionModuleBase<SocketInteractionContext>
         [Summary("time", "Time (e.g., 10s, 5m, 2h)")] string time,
         [Summary("message", "Reminder message")] string message)
     {
-        await DeferAsync(ephemeral: true); // để tránh timeout
+        await DeferAsync(ephemeral: true); // to avoid timeout
         TimeSpan delay;
 
         try

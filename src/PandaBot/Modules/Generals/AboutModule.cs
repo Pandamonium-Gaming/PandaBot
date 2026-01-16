@@ -6,24 +6,26 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using DiscordBot.Services;
 
 namespace DiscordBot.Modules.Generals;
 
 public class AboutModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly DiscordSocketClient _client;
-    private static readonly DateTime _startTime = DateTime.Now;
+    private readonly DiscordBotService _botService;
 
-    public AboutModule(DiscordSocketClient client)
+    public AboutModule(DiscordSocketClient client, DiscordBotService botService)
     {
         _client = client;
+        _botService = botService;
     }
 
     [SlashCommand("about", "About this bot")]
     public async Task AboutAsync()
     {
         var botUser = _client.CurrentUser;
-        var uptime = DateTime.Now - _startTime;
+        var uptime = DateTime.UtcNow - _botService.StartTime;
 
         var embed = new EmbedBuilder()
             .WithTitle("🤖 About this bot")
