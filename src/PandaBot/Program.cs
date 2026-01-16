@@ -25,6 +25,20 @@ var host = Host.CreateDefaultBuilder(args)
                 {
                     Console.WriteLine("PandaBotToken environment variable not set. Using other configuration sources.");
                 }
+                // Support explicit SupaBaseToken environment variable
+                var supabaseToken = Environment.GetEnvironmentVariable("SupaBaseToken");
+                if (!string.IsNullOrEmpty(supabaseToken))
+                {
+                    Console.WriteLine("Using SupaBaseToken from environment variable.");
+                    config.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["Supabase:Key"] = supabaseToken
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("SupabaseToken environment variable not set. Using other configuration sources.");
+                }
             })
             .ConfigureServices((context, services) =>
             {
