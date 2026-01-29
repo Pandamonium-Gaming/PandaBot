@@ -59,7 +59,6 @@ public class RewardItem
     public AmountExpression? Amount { get; set; }
 
     [JsonPropertyName("displayIcon")]
-    [Newtonsoft.Json.JsonConverter(typeof(DiscordBot.Models.DisplayIconConverter))]
     public string? DisplayIcon { get; set; }  // TODO: Map to ashescodex.com URLs
 }
 

@@ -3,16 +3,9 @@ using Discord.WebSocket;
 using Discord.Interactions;
 using DiscordBot.Models;
 using Microsoft.Extensions.Logging;
-<<<<<<< HEAD
-=======
-using PandaBot;
->>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
 
 namespace DiscordBot.Services;
 
-/// <summary>
-/// Main bot service that manages lifecycle events, logging, and command handling.
-/// </summary>
 public class DiscordBotService
 {
     private readonly DiscordSocketClient _client;
@@ -20,12 +13,9 @@ public class DiscordBotService
     private readonly IServiceProvider _services;
     private readonly BotConfig _config;
     private readonly ILogger<DiscordBotService> _logger;
-<<<<<<< HEAD
     private readonly TaskCompletionSource<bool> _readyCompletionSource = new();
 
     public DateTime StartTime { get; private set; }
-=======
->>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
 
     public DiscordBotService(
         DiscordSocketClient client,
@@ -40,26 +30,16 @@ public class DiscordBotService
         _config = config;
         _logger = logger;
 
-        // Subscribe to Discord events
         _client.Log += LogAsync;
         _client.Ready += ReadyAsync;
         _client.InteractionCreated += HandleInteractionAsync;
-<<<<<<< HEAD
         _client.GuildAvailable += GuildAvailableAsync;
-        
-        // Log interaction service events
         _interactionService.Log += LogAsync;
         _interactionService.SlashCommandExecuted += SlashCommandExecutedAsync;
-=======
->>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
     }
 
-    /// <summary>
-    /// Starts the bot and connects to Discord.
-    /// </summary>
     public async Task StartAsync()
     {
-<<<<<<< HEAD
         StartTime = DateTime.UtcNow;
 
         if (string.IsNullOrWhiteSpace(_config.Token))
@@ -68,7 +48,6 @@ public class DiscordBotService
             return;
         }
 
-        // Load slash command modules before connecting
         _logger.LogInformation("Loading interaction service modules...");
         await _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
         
@@ -88,41 +67,20 @@ public class DiscordBotService
             }
         }
 
-=======
-        if (string.IsNullOrWhiteSpace(_config.Token))
-        {
-            _logger.LogError("Bot token is not configured. Please set the token in appsettings.json");
-            return;
-        }
-
->>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
-        // Login & connect
         await _client.LoginAsync(TokenType.Bot, _config.Token);
         await _client.StartAsync();
 
-<<<<<<< HEAD
-        // Wait for the Ready event to complete
         _logger.LogInformation("Waiting for bot to be ready...");
         await _readyCompletionSource.Task;
         _logger.LogInformation("Bot is ready and guilds are cached");
-=======
-        // Load slash command modules
-        await _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
->>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
     }
 
-    /// <summary>
-    /// Stops the bot and logs out from Discord.
-    /// </summary>
     public async Task StopAsync()
     {
         await _client.StopAsync();
         await _client.LogoutAsync();
     }
 
-    /// <summary>
-    /// Handles log events from Discord.NET and maps them to Microsoft.Extensions.Logging levels.
-    /// </summary>
     private Task LogAsync(LogMessage log)
     {
         var logLevel = log.Severity switch
@@ -140,10 +98,6 @@ public class DiscordBotService
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Called when the bot has successfully connected and is ready.
-    /// </summary>
-<<<<<<< HEAD
     private Task ReadyAsync()
     {
         _logger.LogInformation("Bot {Username} is connected and ready!", _client.CurrentUser.Username);
@@ -154,10 +108,8 @@ public class DiscordBotService
             _logger.LogInformation("Guild: {GuildName} ({GuildId})", guild.Name, guild.Id);
         }
 
-        // Don't block - register commands asynchronously
         _ = Task.Run(async () =>
         {
-            // Wait a bit for guilds to be available
             await Task.Delay(2000);
             
             _logger.LogInformation("After delay, client has {GuildCount} guilds", _client.Guilds.Count);
@@ -183,18 +135,12 @@ public class DiscordBotService
         return Task.CompletedTask;
     }
     
-    /// <summary>
-    /// Called when a guild becomes available.
-    /// </summary>
     private Task GuildAvailableAsync(SocketGuild guild)
     {
         _logger.LogInformation("Guild available: {GuildName} ({GuildId})", guild.Name, guild.Id);
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Called when a slash command is executed.
-    /// </summary>
     private Task SlashCommandExecutedAsync(SlashCommandInfo command, IInteractionContext context, IResult result)
     {
         if (!result.IsSuccess)
@@ -208,33 +154,10 @@ public class DiscordBotService
         return Task.CompletedTask;
     }
 
-=======
-    private async Task ReadyAsync()
-    {
-        _logger.LogInformation("Bot {Username} is connected and ready!", _client.CurrentUser.Username);
-
-        if (_config.GuildId.HasValue)
-        {
-            await _interactionService.RegisterCommandsToGuildAsync(_config.GuildId.Value);
-            _logger.LogInformation("Slash commands registered to guild {GuildId}", _config.GuildId.Value);
-        }
-        else
-        {
-            await _interactionService.RegisterCommandsGloballyAsync();
-            _logger.LogInformation("Slash commands registered globally");
-        }
-    }
-
-
->>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
-    /// <summary>
-    /// Handle slash command execution
-    /// </summary>
     private async Task HandleInteractionAsync(SocketInteraction interaction)
     {
         try
         {
-<<<<<<< HEAD
             var receivedTime = DateTime.Now;
             var interactionCreatedAt = interaction.CreatedAt.UtcDateTime;
             var age = (receivedTime.ToUniversalTime() - interactionCreatedAt).TotalSeconds;
@@ -242,7 +165,6 @@ public class DiscordBotService
             _logger.LogInformation("[{Time}] Interaction {InteractionId} created at {CreatedAt}, age: {Age:F3}s, type: {Type}", 
                 receivedTime.ToString("HH:mm:ss.fff"), interaction.Id, interactionCreatedAt.ToString("HH:mm:ss.fff"), age, interaction.Type);
             
-            // Log custom ID for component interactions
             if (interaction is SocketMessageComponent component)
             {
                 _logger.LogInformation("Component interaction with CustomId: '{CustomId}'", component.Data.CustomId);
@@ -260,10 +182,6 @@ public class DiscordBotService
             {
                 _logger.LogError("Command execution failed: {Error}", result.ErrorReason);
             }
-=======
-            var ctx = new SocketInteractionContext(_client, interaction);
-            await _interactionService.ExecuteCommandAsync(ctx, _services);
->>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
         }
         catch (Exception ex)
         {
