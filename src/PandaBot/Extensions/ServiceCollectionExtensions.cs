@@ -5,8 +5,11 @@ using DiscordBot.Models;
 using DiscordBot.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+<<<<<<< HEAD
 using Microsoft.Extensions.Logging;
 using SupabaseClient = Supabase.Client;
+=======
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
 
 namespace DiscordBot.Extensions;
 
@@ -28,6 +31,7 @@ public static class ServiceCollectionExtensions
         var socketConfig = new DiscordSocketConfig
         {
             AlwaysDownloadUsers = true,
+<<<<<<< HEAD
             GatewayIntents = GatewayIntents.Guilds | 
                              GatewayIntents.GuildMembers | 
                              GatewayIntents.GuildMessages |
@@ -36,11 +40,19 @@ public static class ServiceCollectionExtensions
             MessageCacheSize = 100,
             AlwaysResolveStickers = false,
             UseInteractionSnowflakeDate = true
+=======
+            GatewayIntents = GatewayIntents.All,
+            LogLevel = LogSeverity.Info
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
         };
         services.AddSingleton(socketConfig);
         services.AddSingleton<DiscordSocketClient>();
 
+<<<<<<< HEAD
         // Add InteractionService (important for slash commands)
+=======
+        // Add InteractionService (quan trọng cho slash commands)
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
         services.AddSingleton(x =>
         {
             var client = x.GetRequiredService<DiscordSocketClient>();
@@ -49,6 +61,7 @@ public static class ServiceCollectionExtensions
 
         // Core bot services
         services.AddSingleton<DiscordBotService>();
+<<<<<<< HEAD
         
         // External API services
         services.AddHttpClient<AshesCodexService>();
@@ -74,6 +87,8 @@ public static class ServiceCollectionExtensions
         });
         
         services.AddSingleton<SupabaseCodexService>();
+=======
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
 
         return services;
     }

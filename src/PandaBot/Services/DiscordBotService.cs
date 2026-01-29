@@ -3,6 +3,10 @@ using Discord.WebSocket;
 using Discord.Interactions;
 using DiscordBot.Models;
 using Microsoft.Extensions.Logging;
+<<<<<<< HEAD
+=======
+using PandaBot;
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
 
 namespace DiscordBot.Services;
 
@@ -16,9 +20,12 @@ public class DiscordBotService
     private readonly IServiceProvider _services;
     private readonly BotConfig _config;
     private readonly ILogger<DiscordBotService> _logger;
+<<<<<<< HEAD
     private readonly TaskCompletionSource<bool> _readyCompletionSource = new();
 
     public DateTime StartTime { get; private set; }
+=======
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
 
     public DiscordBotService(
         DiscordSocketClient client,
@@ -37,11 +44,14 @@ public class DiscordBotService
         _client.Log += LogAsync;
         _client.Ready += ReadyAsync;
         _client.InteractionCreated += HandleInteractionAsync;
+<<<<<<< HEAD
         _client.GuildAvailable += GuildAvailableAsync;
         
         // Log interaction service events
         _interactionService.Log += LogAsync;
         _interactionService.SlashCommandExecuted += SlashCommandExecutedAsync;
+=======
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
     }
 
     /// <summary>
@@ -49,6 +59,7 @@ public class DiscordBotService
     /// </summary>
     public async Task StartAsync()
     {
+<<<<<<< HEAD
         StartTime = DateTime.UtcNow;
 
         if (string.IsNullOrWhiteSpace(_config.Token))
@@ -77,14 +88,27 @@ public class DiscordBotService
             }
         }
 
+=======
+        if (string.IsNullOrWhiteSpace(_config.Token))
+        {
+            _logger.LogError("Bot token is not configured. Please set the token in appsettings.json");
+            return;
+        }
+
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
         // Login & connect
         await _client.LoginAsync(TokenType.Bot, _config.Token);
         await _client.StartAsync();
 
+<<<<<<< HEAD
         // Wait for the Ready event to complete
         _logger.LogInformation("Waiting for bot to be ready...");
         await _readyCompletionSource.Task;
         _logger.LogInformation("Bot is ready and guilds are cached");
+=======
+        // Load slash command modules
+        await _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
     }
 
     /// <summary>
@@ -119,6 +143,7 @@ public class DiscordBotService
     /// <summary>
     /// Called when the bot has successfully connected and is ready.
     /// </summary>
+<<<<<<< HEAD
     private Task ReadyAsync()
     {
         _logger.LogInformation("Bot {Username} is connected and ready!", _client.CurrentUser.Username);
@@ -183,6 +208,25 @@ public class DiscordBotService
         return Task.CompletedTask;
     }
 
+=======
+    private async Task ReadyAsync()
+    {
+        _logger.LogInformation("Bot {Username} is connected and ready!", _client.CurrentUser.Username);
+
+        if (_config.GuildId.HasValue)
+        {
+            await _interactionService.RegisterCommandsToGuildAsync(_config.GuildId.Value);
+            _logger.LogInformation("Slash commands registered to guild {GuildId}", _config.GuildId.Value);
+        }
+        else
+        {
+            await _interactionService.RegisterCommandsGloballyAsync();
+            _logger.LogInformation("Slash commands registered globally");
+        }
+    }
+
+
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
     /// <summary>
     /// Handle slash command execution
     /// </summary>
@@ -190,6 +234,7 @@ public class DiscordBotService
     {
         try
         {
+<<<<<<< HEAD
             var receivedTime = DateTime.Now;
             var interactionCreatedAt = interaction.CreatedAt.UtcDateTime;
             var age = (receivedTime.ToUniversalTime() - interactionCreatedAt).TotalSeconds;
@@ -215,6 +260,10 @@ public class DiscordBotService
             {
                 _logger.LogError("Command execution failed: {Error}", result.ErrorReason);
             }
+=======
+            var ctx = new SocketInteractionContext(_client, interaction);
+            await _interactionService.ExecuteCommandAsync(ctx, _services);
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
         }
         catch (Exception ex)
         {

@@ -14,7 +14,16 @@
 		<PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="9.0.8" />
 		<PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.8" />
 		<PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
+<<<<<<< HEAD
 		<PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.8" />
 		<PackageVersion Include="supabase-csharp" Version="0.16.2" />
       </ItemGroup>
+=======
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0" />
+  </ItemGroup>
+>>>>>>> 0a7330edd6bdef4e16b484716a5c6340f9439482
 </Project>
