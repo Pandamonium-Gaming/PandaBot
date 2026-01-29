@@ -1,0 +1,19 @@
+[build]
+# Path to the project or solution file
+command = "dotnet publish -c Release -o ./publish"
+
+[run]
+# Command to run the bot from the published output
+command = "dotnet ./publish/PandaBot.dll"
+
+[env]
+# Example environment variables (customize as needed)
+ASPNETCORE_ENVIRONMENT = "Production"
+DISCORD_TOKEN = "your-discord-token-here"
+DATABASE_URL = "your-database-url-here"
+
+[static_sites]
+# No static sites for this bot, section left for reference
+# [[static_sites]]
+#   source = "wwwroot"
+#   routes = ["/"]

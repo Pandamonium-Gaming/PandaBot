@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Discord.Interactions;
 using DiscordBot.Models;
 using Microsoft.Extensions.Logging;
+using PandaBot;
 
 namespace DiscordBot.Services;
 
