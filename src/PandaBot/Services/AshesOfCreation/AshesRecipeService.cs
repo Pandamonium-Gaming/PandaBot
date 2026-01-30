@@ -43,10 +43,10 @@ public class AshesRecipeService
             if (exactMatch)
             {
                 results = await context.CachedCraftingRecipes
+                    .AsNoTracking()
                     .Where(r => r.Name.ToLower() == query.ToLower() || r.OutputItemName.ToLower() == query.ToLower())
                     .Include(r => r.Ingredients)
                     .OrderBy(r => r.Name)
-                    .AsNoTracking()
                     .ToListAsync();
                 
                 _logger.LogInformation("Found {Count} exact match(es) in cache", results.Count);
@@ -55,9 +55,9 @@ public class AshesRecipeService
             {
                 // Fuzzy search - contains match with relevance scoring
                 results = await context.CachedCraftingRecipes
+                    .AsNoTracking()
                     .Where(r => EF.Functions.Like(r.Name, $"%{query}%") || EF.Functions.Like(r.OutputItemName, $"%{query}%"))
                     .Include(r => r.Ingredients)
-                    .AsNoTracking()
                     .ToListAsync();
 
                 _logger.LogInformation("Found {Count} fuzzy match(es) in cache", results.Count);
@@ -152,17 +152,17 @@ public class AshesRecipeService
         return recipe;
     }
 
-    public async Task<Embed> BuildRecipeEmbedAsync(PandaBotContext context, CachedCraftingRecipe recipe)
+    public async Task<Embed> BuildRecipeEmbedAsync(PandaBotContext context, CachedCraftingRecipe recipe, bool includeRawMaterials = false, AshesForgeApiService? apiService = null)
     {
-        _logger.LogInformation("Building recipe embed for: {RecipeName}, Ingredients count: {IngredientCount}", 
-            recipe.Name, recipe.Ingredients?.Count ?? 0);
+        _logger.LogInformation("Building recipe embed for: {RecipeName}, Ingredients count: {IngredientCount}, IncludeRawMaterials: {IncludeRawMaterials}", 
+            recipe.Name, recipe.Ingredients?.Count ?? 0, includeRawMaterials);
         
         // Load output item to get rarity information and attributes
         var outputItem = recipe.OutputItem ?? 
             await context.CachedItems.FirstOrDefaultAsync(i => i.ItemId == recipe.OutputItemId);
 
         var embed = new EmbedBuilder()
-            .WithUrl($"https://www.ashesforge.com/recipes/{recipe.RecipeId}");
+            .WithUrl($"https://www.ashesforge.com/crafting-calculator?recipe={recipe.RecipeId}");
 
         // Build title with output item name and quality range
         var title = recipe.OutputItemName;
@@ -181,7 +181,27 @@ public class AshesRecipeService
         }
 
         // Convert profession level to human-readable format
-        var professionLevel = GetProfessionLevelName(recipe.Profession, recipe.ProfessionLevel);
+        // Try to get certificationLevel from RawJson first, fall back to ProfessionLevel
+        var professionLevelNum = recipe.ProfessionLevel;
+        if (!string.IsNullOrEmpty(recipe.RawJson))
+        {
+            try
+            {
+                var certLevel = ExtractCertificationLevelFromJson(recipe.RawJson);
+                if (certLevel.HasValue)
+                {
+                    professionLevelNum = certLevel.Value;
+                    // Update the database with the correct value
+                    recipe.ProfessionLevel = professionLevelNum;
+                }
+            }
+            catch
+            {
+                // Use the stored ProfessionLevel if extraction fails
+            }
+        }
+        
+        var professionLevel = GetProfessionLevelName(recipe.Profession, professionLevelNum);
         var professionInfo = $"{recipe.Profession} - {professionLevel}";
         embed.AddField("Crafter Level", professionInfo, inline: true);
 
@@ -248,6 +268,35 @@ public class AshesRecipeService
         if (recipe.Views > 0)
         {
             embed.AddField("Views", recipe.Views.ToString("N0"), inline: true);
+        }
+
+        // Add raw materials if requested and we have the API service
+        if (includeRawMaterials && apiService != null && recipe.Ingredients?.Any() == true)
+        {
+            try
+            {
+                var rawMaterials = new Dictionary<string, int>();
+                await FetchRawMaterialsRecursiveAsync(context, recipe.Ingredients.ToList(), rawMaterials, apiService);
+                
+                if (rawMaterials.Count > 0)
+                {
+                    var rawMaterialList = new StringBuilder();
+                    foreach (var rm in rawMaterials.OrderBy(r => r.Key))
+                    {
+                        rawMaterialList.AppendLine($"• {rm.Key} x{rm.Value}");
+                    }
+                    var rawMaterialText = rawMaterialList.ToString().TrimEnd();
+                    if (!string.IsNullOrEmpty(rawMaterialText))
+                    {
+                        embed.AddField("Raw Materials Required", rawMaterialText, inline: false);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error calculating raw materials for recipe {RecipeName}", recipe.Name);
+                // Continue without raw materials rather than failing the entire embed
+            }
         }
 
         embed.WithFooter($"Cached: {recipe.CachedAt:g}");
@@ -318,6 +367,48 @@ public class AshesRecipeService
         }
     }
 
+    private int? ExtractCertificationLevelFromJson(string rawJson)
+    {
+        try
+        {
+            using (var doc = JsonDocument.Parse(rawJson))
+            {
+                var root = doc.RootElement;
+                
+                // Try to get certificationLevel property
+                if (root.TryGetProperty("certificationLevel", out var certLevelProp))
+                {
+                    if (certLevelProp.ValueKind == JsonValueKind.String)
+                    {
+                        var levelName = certLevelProp.GetString();
+                        // Map level names to numbers
+                        return levelName?.ToLower() switch
+                        {
+                            "novice" => 0,
+                            "apprentice" => 1,
+                            "journeyman" => 4,
+                            "artisan" => 7,
+                            "master" => 10,
+                            "expert" => 13,
+                            "grandmaster" => 16,
+                            _ => null
+                        };
+                    }
+                    else if (certLevelProp.ValueKind == JsonValueKind.Number)
+                    {
+                        return certLevelProp.GetInt32();
+                    }
+                }
+                
+                return null;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private int GetStatValue(System.Text.Json.JsonElement element, string propertyName)
     {
         if (element.TryGetProperty(propertyName, out var prop))
@@ -346,6 +437,7 @@ public class AshesRecipeService
     {
         return level switch
         {
+            0 => "Novice",
             1 => "Apprentice I",
             2 => "Apprentice II",
             3 => "Apprentice III",
@@ -370,66 +462,86 @@ public class AshesRecipeService
 
     public async Task<Embed> BuildRecipeWithRawMaterialsEmbedAsync(PandaBotContext context, CachedCraftingRecipe recipe, AshesForgeApiService apiService)
     {
-        _logger.LogInformation("Building raw materials embed for: {RecipeName}", recipe.Name);
+        _logger.LogInformation("Building recipe embed with raw materials for: {RecipeName}", recipe.Name);
         
-        // Log the ingredients we have
         var ingredients = recipe.Ingredients?.ToList() ?? new List<CachedRecipeIngredient>();
-        foreach (var ing in ingredients)
+        var rawMaterials = new Dictionary<string, int>();
+        var requiredProfessions = new HashSet<string>();
+        
+        // Add the main recipe's profession - extract from RawJson if available
+        var mainLevel = recipe.ProfessionLevel;
+        if (!string.IsNullOrEmpty(recipe.RawJson))
         {
-            _logger.LogWarning("Ingredient: {Name} (ID: {ItemId}) x{Qty}", ing.ItemName, ing.ItemId ?? "[NULL]", ing.Quantity);
+            var certLevel = ExtractCertificationLevelFromJson(recipe.RawJson);
+            if (certLevel.HasValue)
+                mainLevel = certLevel.Value;
         }
+        var mainProfessionLevel = GetProfessionLevelName(recipe.Profession, mainLevel);
+        requiredProfessions.Add($"{recipe.Profession} - {mainProfessionLevel}");
         
-        var baseEmbed = await BuildRecipeEmbedAsync(context, recipe);
+        // Fetch raw materials and collect required professions
+        await FetchRawMaterialsRecursiveAsync(context, ingredients, rawMaterials, apiService, depth: 0, maxDepth: 5, requiredProfessions: requiredProfessions);
         
-        // Fetch all raw materials recursively
-        var rawMaterials = new Dictionary<string, int>(); // ItemName -> Total Quantity
-        await FetchRawMaterialsRecursiveAsync(context, ingredients, rawMaterials, apiService);
+        // Build the embed
+        var outputItem = recipe.OutputItem ?? 
+            await context.CachedItems.FirstOrDefaultAsync(i => i.ItemId == recipe.OutputItemId);
         
-        // Log final raw materials
-        _logger.LogWarning("=== Final Raw Materials ({Count} items) ===", rawMaterials.Count);
-        foreach (var rm in rawMaterials)
-        {
-            _logger.LogWarning("  {ItemName}: {Qty}", rm.Key, rm.Value);
-        }
-        
-        // Create new embed with raw materials
         var embed = new EmbedBuilder()
-            .WithTitle($"{baseEmbed.Title} [Raw Materials Breakdown]")
-            .WithColor(baseEmbed.Color ?? Color.Gold)
-            .WithUrl(baseEmbed.Url)
-            .WithThumbnailUrl(baseEmbed.Thumbnail?.Url);
+            .WithUrl($"https://www.ashesforge.com/recipes/{recipe.RecipeId}")
+            .WithTitle($"{recipe.OutputItemName} [Raw Materials Breakdown]")
+            .WithColor(GetColourForRarity(outputItem?.Rarity));
 
-        // Copy craft level info
-        foreach (var field in baseEmbed.Fields.Where(f => f.Name == "Crafter Level" || f.Name == "Station" || f.Name == "Craft Time"))
+        if (!string.IsNullOrEmpty(outputItem?.IconUrl))
         {
-            embed.AddField(field.Name, field.Value, field.Inline);
+            var iconUrl = _imageCache.GetImageUrl(outputItem.IconUrl);
+            embed.WithThumbnailUrl(iconUrl);
         }
 
-        // Add produces
-        var producesField = baseEmbed.Fields.FirstOrDefault(f => f.Name == "Produces");
-        var producesValue = producesField != null ? producesField.Value : recipe.OutputItemName;
-        embed.AddField("Produces", producesValue, inline: false);
+        // Show produces
+        var outputText = $"{recipe.OutputItemName}";
+        if (recipe.OutputQuantity > 1)
+            outputText += $" x{recipe.OutputQuantity}";
+        embed.AddField("Produces", outputText, inline: false);
 
-        // Add direct ingredients
-        var directIngredients = new StringBuilder();
-        foreach (var ingredient in (recipe.Ingredients ?? new List<CachedRecipeIngredient>()).OrderBy(i => i.ItemName))
+        // Show direct ingredients
+        if (recipe.Ingredients?.Count > 0)
         {
-            directIngredients.AppendLine($"• {ingredient.ItemName} x{ingredient.Quantity}");
-        }
-        if (directIngredients.Length > 0)
-        {
-            embed.AddField("Direct Ingredients", directIngredients.ToString().TrimEnd(), inline: false);
+            var ingredientList = new StringBuilder();
+            foreach (var ingredient in recipe.Ingredients.OrderBy(i => i.ItemName))
+            {
+                ingredientList.AppendLine($"• {ingredient.ItemName} x{ingredient.Quantity}");
+            }
+            var ingredientText = ingredientList.ToString().TrimEnd();
+            if (!string.IsNullOrEmpty(ingredientText))
+            {
+                embed.AddField("Direct Ingredients", ingredientText, inline: false);
+            }
         }
 
-        // Add raw materials breakdown
+        // Show required professions
+        if (requiredProfessions.Count > 0)
+        {
+            var professionsList = new StringBuilder();
+            foreach (var profession in requiredProfessions.OrderBy(p => p))
+            {
+                professionsList.AppendLine($"• {profession}");
+            }
+            embed.AddField("Required Skills", professionsList.ToString().TrimEnd(), inline: false);
+        }
+
+        // Show raw materials
         if (rawMaterials.Count > 0)
         {
-            var rawMaterialsList = new StringBuilder();
-            foreach (var material in rawMaterials.OrderBy(x => x.Key))
+            var rawMaterialList = new StringBuilder();
+            foreach (var rm in rawMaterials.OrderBy(r => r.Key))
             {
-                rawMaterialsList.AppendLine($"• {material.Key} x{material.Value}");
+                rawMaterialList.AppendLine($"• {rm.Key} x{rm.Value}");
             }
-            embed.AddField("Raw Materials", rawMaterialsList.ToString().TrimEnd(), inline: false);
+            var rawMaterialText = rawMaterialList.ToString().TrimEnd();
+            if (!string.IsNullOrEmpty(rawMaterialText))
+            {
+                embed.AddField("Raw Materials Required", rawMaterialText, inline: false);
+            }
         }
 
         embed.WithFooter($"Cached: {recipe.CachedAt:g}");
@@ -442,8 +554,13 @@ public class AshesRecipeService
         Dictionary<string, int> rawMaterials,
         AshesForgeApiService apiService,
         int depth = 0,
-        int maxDepth = 5)
+        int maxDepth = 5,
+        HashSet<string>? requiredProfessions = null)
     {
+        // Initialize the professions set on first call
+        if (requiredProfessions == null && depth == 0)
+            requiredProfessions = new HashSet<string>();
+        
         if (depth >= maxDepth || ingredients == null || ingredients.Count == 0)
             return;
 
@@ -461,13 +578,29 @@ public class AshesRecipeService
                     .Include(r => r.Ingredients)
                     .FirstOrDefaultAsync(r => r.OutputItemId == ingredient.ItemId);
                 
+                // Skip purification/refinement recipes - those are for processing raw materials, not crafting
+                if (recipeForIngredient != null && recipeForIngredient.Name.Contains("Purification", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("  → {ItemName} is a purification recipe output (raw material) - skipping", ingredient.ItemName);
+                    AddRawMaterial(rawMaterials, ingredient.ItemName, ingredient.Quantity);
+                    continue;
+                }
+                
                 if (recipeForIngredient != null && recipeForIngredient.Ingredients.Any())
                 {
                     _logger.LogWarning("  ✓ Found recipe for {ItemName} in cache - {ProfessionName} Lvl {Level}", 
                         ingredient.ItemName, recipeForIngredient.Profession, recipeForIngredient.ProfessionLevel);
                     
+                    // Track this profession as required
+                    if (!string.IsNullOrEmpty(recipeForIngredient.Profession) && depth > 0)  // Don't track the initial recipe's profession
+                    {
+                        var professionLevel = GetProfessionLevelName(recipeForIngredient.Profession, recipeForIngredient.ProfessionLevel);
+                        requiredProfessions?.Add($"{recipeForIngredient.Profession} - {professionLevel}");
+                    }
+                    
                     // Recurse into this recipe's ingredients, multiplying quantities by parent quantity
                     var subIngredients = recipeForIngredient.Ingredients
+                        .Where(sub => sub.ItemId != ingredient.ItemId)  // Filter out self-referential ingredients
                         .Select(sub => new CachedRecipeIngredient
                         {
                             ItemId = sub.ItemId,
@@ -476,10 +609,17 @@ public class AshesRecipeService
                         })
                         .ToList();
                     
-                    _logger.LogWarning("  Recursing into {Count} sub-ingredients for {ItemName} (quantity multiplier: {ParentQty})", 
-                        subIngredients.Count, ingredient.ItemName, ingredient.Quantity);
-                    await FetchRawMaterialsRecursiveAsync(context, subIngredients, rawMaterials, apiService, depth + 1, maxDepth);
-                    continue;
+                    if (subIngredients.Any(sub => sub.ItemId != ingredient.ItemId))
+                    {
+                        _logger.LogWarning("  Recursing into {Count} sub-ingredients for {ItemName} (quantity multiplier: {ParentQty})", 
+                            subIngredients.Count, ingredient.ItemName, ingredient.Quantity);
+                        await FetchRawMaterialsRecursiveAsync(context, subIngredients, rawMaterials, apiService, depth + 1, maxDepth, requiredProfessions);
+                        continue;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("  → {ItemName} recipe only contains itself (circular) - treating as raw material", ingredient.ItemName);
+                    }
                 }
 
                 // Not in cache - try fetching from API as fallback
@@ -513,6 +653,9 @@ public class AshesRecipeService
                                                 var itemName = item.TryGetProperty("name", out var name) ? name.GetString() : "Unknown";
                                                 var quantity = item.TryGetProperty("quantity", out var qty) ? qty.GetInt32() : 1;
                                                 
+                                                _logger.LogWarning("    API Recipe Input: {SubItemName} (ID: {SubItemId}) x{SubQty}", 
+                                                    itemName, itemId ?? "[NULL]", quantity);
+                                                
                                                 if (!string.IsNullOrEmpty(itemId))
                                                 {
                                                     subIngredients.Add(new CachedRecipeIngredient
@@ -532,7 +675,7 @@ public class AshesRecipeService
                             {
                                 _logger.LogWarning("  Recursing into {Count} sub-ingredients from API for {ItemName} (quantity multiplier: {ParentQty})", 
                                     subIngredients.Count, ingredient.ItemName, ingredient.Quantity);
-                                await FetchRawMaterialsRecursiveAsync(context, subIngredients, rawMaterials, apiService, depth + 1, maxDepth);
+                                await FetchRawMaterialsRecursiveAsync(context, subIngredients, rawMaterials, apiService, depth + 1, maxDepth, requiredProfessions);
                                 continue;
                             }
                         }

@@ -349,14 +349,20 @@ public class AshesModule : InteractionModuleBase<SocketInteractionContext>
                 if (fullRecipe != null)
                 {
                     var embedStartTime = DateTime.UtcNow;
+                    // Build clean embed without raw materials
                     var recipeEmbed = await recipeService.BuildRecipeEmbedAsync(context, fullRecipe);
                     var embedEndTime = DateTime.UtcNow;
                     logger.LogInformation("BuildRecipeEmbedAsync completed in {Ms}ms", (embedEndTime - embedStartTime).TotalMilliseconds);
                     
                     var followupStartTime = DateTime.UtcNow;
-                    await FollowupAsync(embed: recipeEmbed);
+                    // Add button directly to the embed response
+                    var buttons = new ComponentBuilder()
+                        .WithButton("View Raw Materials & Skills", $"raw_materials:{results[0].RecipeId}:{Context.User.Id}", ButtonStyle.Secondary)
+                        .Build();
+                    
+                    await FollowupAsync(embed: recipeEmbed, components: buttons);
                     var followupEndTime = DateTime.UtcNow;
-                    logger.LogInformation("FollowupAsync (embed) completed in {Ms}ms", (followupEndTime - followupStartTime).TotalMilliseconds);
+                    logger.LogInformation("FollowupAsync completed in {Ms}ms", (followupEndTime - followupStartTime).TotalMilliseconds);
                 }
                 else
                 {
@@ -364,15 +370,6 @@ public class AshesModule : InteractionModuleBase<SocketInteractionContext>
                     await FollowupAsync("Recipe not found.");
                 }
                 
-                // Add button for raw materials view
-                var buttons = new ComponentBuilder()
-                    .WithButton("View Raw Materials", $"raw_materials:{results[0].RecipeId}:{Context.User.Id}", ButtonStyle.Secondary)
-                    .Build();
-                
-                var buttonFollowupStartTime = DateTime.UtcNow;
-                await FollowupAsync(components: buttons);
-                var buttonFollowupEndTime = DateTime.UtcNow;
-                logger.LogInformation("FollowupAsync (buttons) completed in {Ms}ms", (buttonFollowupEndTime - buttonFollowupStartTime).TotalMilliseconds);
                 logger.LogInformation("RecipeCommand COMPLETE - Total time: {Ms}ms", (DateTime.UtcNow - commandStartTime).TotalMilliseconds);
                 return;
             }
