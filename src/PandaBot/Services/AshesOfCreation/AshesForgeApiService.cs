@@ -524,6 +524,10 @@ public class AshesForgeApiService
                 });
             }
             
+            // Save the output item (always save, even if no recipe found)
+            await _context.SaveChangesAsync();
+            _logger.LogWarning("Saved output item {ItemName} with RawJson", itemName);
+            
             // Recipe data is in createdByRecipes array
             if (item.TryGetProperty("createdByRecipes", out var recipesProperty) && 
                 recipesProperty.ValueKind == JsonValueKind.Array)
@@ -585,8 +589,70 @@ public class AshesForgeApiService
                                 }
                             }
                             
-                            await _context.SaveChangesAsync();
-                            _logger.LogWarning("Enriched {RecipeName} with {Count} ingredients", recipe.Name, ingredientCount);
+                            if (ingredientCount > 0)
+                            {
+                                await _context.SaveChangesAsync();
+                                _logger.LogWarning("Enriched {RecipeName} with {Count} ingredients", recipe.Name, ingredientCount);
+                                
+                                // Now fetch and cache each ingredient item for raw materials recursion
+                                _logger.LogWarning("Fetching ingredient details for raw materials recursion...");
+                                var ingredientsToFetch = await _context.CachedRecipeIngredients
+                                    .Where(i => i.CachedCraftingRecipeId == recipe.Id)
+                                    .ToListAsync();
+                                
+                                foreach (var ingredient in ingredientsToFetch)
+                                {
+                                    if (string.IsNullOrEmpty(ingredient.ItemId))
+                                        continue;
+                                    
+                                    // Check if already cached
+                                    var cachedItem = await _context.CachedItems
+                                        .FirstOrDefaultAsync(i => i.ItemId == ingredient.ItemId);
+                                    
+                                    if (cachedItem != null)
+                                    {
+                                        _logger.LogWarning("  {ItemName} already cached, skipping fetch", ingredient.ItemName);
+                                        continue;
+                                    }
+                                    
+                                    // Fetch ingredient details
+                                    _logger.LogWarning("  Fetching ingredient {ItemName} ({ItemId})...", ingredient.ItemName, ingredient.ItemId);
+                                    var ingredientDetails = await FetchItemDetailsAsync(ingredient.ItemId);
+                                    
+                                    if (ingredientDetails.HasValue)
+                                    {
+                                        var ingredientItem = ingredientDetails.Value;
+                                        var ingredientName = GetStringProperty(ingredientItem, "name") ?? ingredient.ItemName;
+                                        var ingredientIconUrl = GetStringProperty(ingredientItem, "icon") ?? string.Empty;
+                                        var ingredientRarity = GetStringProperty(ingredientItem, "rarity") ?? string.Empty;
+                                        var ingredientRawJson = ingredientItem.GetRawText();
+                                        
+                                        _context.CachedItems.Add(new CachedItem
+                                        {
+                                            ItemId = ingredient.ItemId,
+                                            Name = ingredientName,
+                                            IconUrl = ingredientIconUrl,
+                                            Rarity = ingredientRarity,
+                                            RawJson = ingredientRawJson,
+                                            CachedAt = DateTime.UtcNow,
+                                            LastUpdated = DateTime.UtcNow
+                                        });
+                                        
+                                        _logger.LogWarning("    ✓ Cached ingredient {ItemName}", ingredientName);
+                                    }
+                                    else
+                                    {
+                                        _logger.LogWarning("    ✗ Failed to fetch ingredient {ItemName}", ingredient.ItemName);
+                                    }
+                                }
+                                
+                                // Save all cached ingredient items
+                                if (ingredientsToFetch.Count > 0)
+                                {
+                                    await _context.SaveChangesAsync();
+                                    _logger.LogWarning("Cached {Count} ingredient items with full details", ingredientsToFetch.Count);
+                                }
+                            }
                             return;
                         }
                     }

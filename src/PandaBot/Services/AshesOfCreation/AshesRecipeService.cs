@@ -473,6 +473,8 @@ public class AshesRecipeService
                     continue;
                 }
 
+                _logger.LogWarning("  ✓ Fetched item details for {ItemName}", ingredient.ItemName);
+
                 // Check if this item has a recipe (can be crafted)
                 if (itemDetails.HasValue && itemDetails.Value.TryGetProperty("createdByRecipes", out var recipesProperty) && 
                     recipesProperty.ValueKind == System.Text.Json.JsonValueKind.Array)
