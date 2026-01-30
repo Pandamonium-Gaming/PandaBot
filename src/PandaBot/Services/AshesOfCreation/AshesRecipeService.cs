@@ -380,19 +380,40 @@ public class AshesRecipeService
                 {
                     if (certLevelProp.ValueKind == JsonValueKind.String)
                     {
-                        var levelName = certLevelProp.GetString();
-                        // Map level names to numbers
-                        return levelName?.ToLower() switch
+                        var levelName = certLevelProp.GetString()?.ToLower() ?? "";
+                        
+                        // Parse tier (base level) and rank (I/II/III offset)
+                        var baseLevels = new Dictionary<string, int>
                         {
-                            "novice" => 0,
-                            "apprentice" => 1,
-                            "journeyman" => 4,
-                            "artisan" => 7,
-                            "master" => 10,
-                            "expert" => 13,
-                            "grandmaster" => 16,
-                            _ => null
+                            { "novice", 0 },
+                            { "apprentice", 1 },
+                            { "journeyman", 4 },
+                            { "artisan", 7 },
+                            { "master", 10 },
+                            { "expert", 13 },
+                            { "grandmaster", 16 }
                         };
+                        
+                        var baseLevel = 0;
+                        foreach (var tier in baseLevels.Keys)
+                        {
+                            if (levelName.StartsWith(tier))
+                            {
+                                baseLevel = baseLevels[tier];
+                                
+                                // Check for Roman numeral suffix (I, II, III)
+                                if (levelName.Contains(" iii") || levelName.Contains(" 3"))
+                                    return baseLevel + 2;
+                                else if (levelName.Contains(" ii") || levelName.Contains(" 2"))
+                                    return baseLevel + 1;
+                                else if (levelName.Contains(" i") || levelName.Contains(" 1"))
+                                    return baseLevel; // Base level is already the "I" variant
+                                else
+                                    return baseLevel; // No suffix, return base
+                            }
+                        }
+                        
+                        return null;
                     }
                     else if (certLevelProp.ValueKind == JsonValueKind.Number)
                     {
