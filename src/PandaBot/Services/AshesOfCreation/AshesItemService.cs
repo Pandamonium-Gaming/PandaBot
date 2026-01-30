@@ -126,13 +126,42 @@ public class AshesItemService
         if (!string.IsNullOrWhiteSpace(item.SlotType))
             embed.AddField("Slot", item.SlotType, inline: true);
 
-        // Recipe usage - match by ItemId only since ItemName is empty in ingredients
-        var recipes = await context.CachedRecipeIngredients
+        // Get recipes that CREATE this item (not use it as ingredient)
+        var creatingRecipes = await context.CachedCraftingRecipes
+            .Where(r => r.OutputItemId == item.ItemId)
+            .AsNoTracking()
+            .ToListAsync();
+
+        // Get recipes that USE this item as an ingredient
+        var usedInRecipes = await context.CachedRecipeIngredients
             .Where(ri => ri.ItemId == item.ItemId)
             .Include(ri => ri.CachedCraftingRecipe)
             .Select(ri => ri.CachedCraftingRecipe)
             .Distinct()
+            .AsNoTracking()
             .ToListAsync();
+
+        // Combine both lists for "Required Skill" calculation
+        var allRelevantRecipes = new List<CachedCraftingRecipe>();
+        if (creatingRecipes.Any())
+            allRelevantRecipes.AddRange(creatingRecipes);
+        if (usedInRecipes.Any())
+            allRelevantRecipes.AddRange(usedInRecipes);
+
+        // Show what creates this item first
+        if (creatingRecipes.Any())
+        {
+            var creatingText = new StringBuilder();
+            creatingText.AppendLine($"**Crafted by {creatingRecipes.Count} recipe(s):**");
+            foreach (var recipe in creatingRecipes.Take(5))
+            {
+                creatingText.AppendLine($"• {recipe.Name} ({recipe.Profession} - {GetLevelNameFromNumber(recipe.ProfessionLevel)})");
+            }
+            embed.AddField("🔨 Crafted By", creatingText.ToString().TrimEnd(), inline: false);
+        }
+
+        // Show what uses this item as ingredient
+        var recipes = usedInRecipes;
 
         if (recipes.Any())
         {
@@ -155,7 +184,7 @@ public class AshesItemService
                 }
             }
 
-            embed.AddField("📜 Crafting Recipes", recipeText.ToString(), inline: false);
+            embed.AddField("📜 Used In", recipeText.ToString(), inline: false);
 
             // Calculate highest required skill level across all recipes using this item
             var recipesByProfession = recipes
@@ -176,7 +205,32 @@ public class AshesItemService
                     var levelName = GetLevelNameFromNumber(prof.MaxLevel);
                     skillText.AppendLine($"• {prof.Profession} - {levelName}");
                 }
-                embed.AddField("⚙️ Highest Required Skill", skillText.ToString().TrimEnd(), inline: false);
+                embed.AddField("⚙️ Required To Craft Items Using This", skillText.ToString().TrimEnd(), inline: false);
+            }
+        }
+
+        // Show overall highest skill requirement (combining creating and using)
+        if (allRelevantRecipes.Any())
+        {
+            var allByProfession = allRelevantRecipes
+                .GroupBy(r => r.Profession)
+                .Select(g => new
+                {
+                    Profession = g.Key,
+                    MaxLevel = g.Max(r => r.ProfessionLevel)
+                })
+                .OrderByDescending(x => x.MaxLevel)
+                .ToList();
+
+            if (allByProfession.Any())
+            {
+                var skillText = new StringBuilder();
+                foreach (var prof in allByProfession)
+                {
+                    var levelName = GetLevelNameFromNumber(prof.MaxLevel);
+                    skillText.AppendLine($"• {prof.Profession} - {levelName}");
+                }
+                embed.AddField("📊 Highest Skill Level (Crafting or Using)", skillText.ToString().TrimEnd(), inline: false);
             }
         }
 

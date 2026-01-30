@@ -201,6 +201,20 @@ public class AshesModule : InteractionModuleBase<SocketInteractionContext>
                 .Include(ri => ri.CachedCraftingRecipe)
                 .ToListAsync();
             
+            // Group recipes by profession to show all levels
+            var recipesByProfession = recipeIngredients
+                .GroupBy(ri => ri.CachedCraftingRecipe?.Profession ?? "Unknown")
+                .Select(g => new
+                {
+                    Profession = g.Key,
+                    Recipes = g.Select(ri => new
+                    {
+                        Name = ri.CachedCraftingRecipe?.Name ?? "Unknown",
+                        Level = ri.CachedCraftingRecipe?.ProfessionLevel ?? -1
+                    }).ToList()
+                })
+                .ToList();
+            
             // Also check for partial matches to see if there's a formatting issue
             var partialMatches = await context.CachedRecipeIngredients
                 .Where(ri => ri.ItemId.Contains(itemId) || itemId.Contains(ri.ItemId))
@@ -217,8 +231,31 @@ public class AshesModule : InteractionModuleBase<SocketInteractionContext>
 
             var recipeInfo = recipeIngredients.Any() 
                 ? $"\n**✅ Used in {recipeIngredients.Count} recipe(s):**\n" + 
-                  string.Join("\n", recipeIngredients.Take(5).Select(ri => $"• {ri.CachedCraftingRecipe?.Name ?? "Unknown"}"))
+                  string.Join("\n", recipeIngredients.Take(5).Select(ri => $"• {ri.CachedCraftingRecipe?.Name ?? "Unknown"} ({ri.CachedCraftingRecipe?.Profession} Lvl {ri.CachedCraftingRecipe?.ProfessionLevel})"))
                 : "\n**❌ Not found as ingredient in any recipes**";
+
+            var professionSummary = recipesByProfession.Any()
+                ? "\n\n**Skill Levels by Profession:**\n" + 
+                  string.Join("\n", recipesByProfession.Select(p => 
+                  {
+                      var levels = p.Recipes.Select(r => r.Level).Distinct().OrderByDescending(x => x);
+                      return $"• {p.Profession}: {string.Join(", ", levels.Select(l => $"Lvl {l}"))}";
+                  }))
+                : "";
+
+            // Also search all recipes to see if any have this item in RawJson but aren't linked as ingredients
+            var allRecipes = await context.CachedCraftingRecipes
+                .Where(r => r.RawJson.Contains(itemId))
+                .ToListAsync();
+            
+            var rawJsonMatches = allRecipes
+                .Where(r => !recipeIngredients.Any(ri => ri.CachedCraftingRecipeId == r.Id))
+                .ToList();
+            
+            var rawJsonInfo = rawJsonMatches.Any()
+                ? $"\n\n**⚠️ Found in RawJson but NOT in ingredients table ({rawJsonMatches.Count}):**\n" +
+                  string.Join("\n", rawJsonMatches.Take(10).Select(r => $"• {r.Name} ({r.Profession} Lvl {r.ProfessionLevel})"))
+                : "";
 
             if (!recipeIngredients.Any() && partialMatches.Any())
             {
@@ -230,7 +267,9 @@ public class AshesModule : InteractionModuleBase<SocketInteractionContext>
                 $"**ItemId:** `{item.ItemId}`\n" +
                 $"**Name:** {item.Name}\n" +
                 $"**Views:** {item.Views:N0}\n" +
-                recipeInfo + "\n\n" +
+                recipeInfo + 
+                professionSummary + 
+                rawJsonInfo + "\n\n" +
                 $"**Database Stats:**\n" +
                 $"• Total Recipes: {await context.CachedCraftingRecipes.CountAsync():N0}\n" +
                 $"• Total Ingredients: {await context.CachedRecipeIngredients.CountAsync():N0}\n\n" +

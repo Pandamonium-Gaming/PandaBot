@@ -227,16 +227,63 @@ public class AshesRecipeService
         if (recipe.Ingredients?.Count > 0)
         {
             _logger.LogInformation("Recipe has {Count} ingredients", recipe.Ingredients.Count);
+            
+            // Get all ingredient items from database to check tags
+            var ingredientNames = recipe.Ingredients.Select(i => i.ItemName).ToList();
+            var ingredientItems = await context.CachedItems
+                .Where(i => ingredientNames.Contains(i.Name))
+                .ToListAsync();
+            
+            var qualityIngredients = new HashSet<string>();
+            
+            // Parse tags and identify quality materials
+            foreach (var ingredient in recipe.Ingredients)
+            {
+                var ingredientItem = ingredientItems.FirstOrDefault(i => i.Name == ingredient.ItemName);
+                if (ingredientItem != null && !string.IsNullOrEmpty(ingredientItem.Tags))
+                {
+                    try
+                    {
+                        var tags = System.Text.Json.JsonSerializer.Deserialize<List<string>>(ingredientItem.Tags) ?? new List<string>();
+                        
+                        // Check for quality material tags
+                        if (tags.Any(t => t.Equals("Artisanship.Processing", StringComparison.OrdinalIgnoreCase) || 
+                                         t.StartsWith("Artisanship.Gathering.", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            qualityIngredients.Add(ingredient.ItemName);
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore JSON parsing errors
+                    }
+                }
+            }
+            
             var ingredientList = new StringBuilder();
             foreach (var ingredient in recipe.Ingredients.OrderBy(i => i.ItemName))
             {
                 _logger.LogInformation("  Ingredient: {ItemName} x{Quantity}", ingredient.ItemName, ingredient.Quantity);
-                ingredientList.AppendLine($"• {ingredient.ItemName} x{ingredient.Quantity}");
+                
+                var prefix = "";
+                
+                if (qualityIngredients.Contains(ingredient.ItemName))
+                {
+                    prefix = "✨ ";
+                }
+                
+                ingredientList.AppendLine($"• {prefix}{ingredient.ItemName} x{ingredient.Quantity}");
             }
             var ingredientText = ingredientList.ToString().TrimEnd();
             if (!string.IsNullOrEmpty(ingredientText))
             {
                 embed.AddField("Ingredients Needed", ingredientText, inline: false);
+                
+                // Add legend if needed
+                if (qualityIngredients.Any())
+                {
+                    embed.AddField("Legend", "✨ = Quality Material", inline: false);
+                }
             }
         }
         else
@@ -434,20 +481,40 @@ public class AshesRecipeService
         
         var ingredients = recipe.Ingredients?.ToList() ?? new List<CachedRecipeIngredient>();
         var rawMaterials = new Dictionary<string, int>();
-        var requiredProfessions = new HashSet<string>();  // profession -> tier name
+        var requiredProfessions = new Dictionary<string, int>();  // profession name -> max level
         
         // Add the main recipe's profession - extract from RawJson if available
-        var mainProfessionLevel = recipe.ProfessionLevel.ToString();
+        var mainProfessionLevel = recipe.ProfessionLevel;
         if (!string.IsNullOrEmpty(recipe.RawJson))
         {
             var certLevel = ExtractCertificationLevelFromJson(recipe.RawJson);
             if (certLevel != null)
-                mainProfessionLevel = certLevel;
+            {
+                mainProfessionLevel = GetProfessionLevelFromName(certLevel);
+            }
         }
-        requiredProfessions.Add($"{recipe.Profession} - {mainProfessionLevel}");
         
-        // Fetch raw materials and collect required professions
-        await FetchRawMaterialsRecursiveAsync(context, ingredients, rawMaterials, apiService, depth: 0, maxDepth: 5, requiredProfessions: requiredProfessions);
+        // Track max level per profession
+        if (!requiredProfessions.ContainsKey(recipe.Profession) || requiredProfessions[recipe.Profession] < mainProfessionLevel)
+            requiredProfessions[recipe.Profession] = mainProfessionLevel;
+        
+        // Fetch raw materials and collect required professions (pass as HashSet for the recursive method)
+        var professionHashSet = new HashSet<string>();
+        await FetchRawMaterialsRecursiveAsync(context, ingredients, rawMaterials, apiService, depth: 0, maxDepth: 5, requiredProfessions: professionHashSet);
+        
+        // Merge the HashSet results back into the Dictionary, keeping max levels
+        foreach (var profString in professionHashSet)
+        {
+            var parts = profString.Split(" - ");
+            if (parts.Length == 2)
+            {
+                var profName = parts[0];
+                var levelNum = GetProfessionLevelFromName(parts[1]);
+                
+                if (!requiredProfessions.ContainsKey(profName) || requiredProfessions[profName] < levelNum)
+                    requiredProfessions[profName] = levelNum;
+            }
+        }
         
         // Build the embed
         var outputItem = recipe.OutputItem ?? 
@@ -483,15 +550,46 @@ public class AshesRecipeService
             {
                 embed.AddField("Direct Ingredients", ingredientText, inline: false);
             }
+
+            // Check what skills are required to CRAFT each direct ingredient
+            foreach (var ingredient in recipe.Ingredients)
+            {
+                var ingredientRecipe = await context.CachedCraftingRecipes
+                    .FirstOrDefaultAsync(r => r.OutputItemId == ingredient.ItemId);
+                
+                if (ingredientRecipe != null && !string.IsNullOrEmpty(ingredientRecipe.Profession))
+                {
+                    var professionLevel = ingredientRecipe.ProfessionLevel;
+                    
+                    // Try to extract certification level from RawJson
+                    if (!string.IsNullOrEmpty(ingredientRecipe.RawJson))
+                    {
+                        var certLevel = ExtractCertificationLevelFromJson(ingredientRecipe.RawJson);
+                        if (certLevel != null)
+                            professionLevel = GetProfessionLevelFromName(certLevel);
+                    }
+                    
+                    // Keep max level for each profession
+                    if (!requiredProfessions.ContainsKey(ingredientRecipe.Profession) || 
+                        requiredProfessions[ingredientRecipe.Profession] < professionLevel)
+                    {
+                        requiredProfessions[ingredientRecipe.Profession] = professionLevel;
+                    }
+                    
+                    _logger.LogInformation("Direct ingredient {ItemName} requires {Profession} - Level {Level}", 
+                        ingredient.ItemName, ingredientRecipe.Profession, professionLevel);
+                }
+            }
         }
 
         // Show required professions
         if (requiredProfessions.Count > 0)
         {
             var professionsList = new StringBuilder();
-            foreach (var profession in requiredProfessions.OrderBy(p => p))
+            foreach (var profession in requiredProfessions.OrderBy(p => p.Key))
             {
-                professionsList.AppendLine($"• {profession}");
+                var levelName = GetLevelNameFromNumber(profession.Value);
+                professionsList.AppendLine($"• {profession.Key} - {levelName}");
             }
             embed.AddField("Required Skills", professionsList.ToString().TrimEnd(), inline: false);
         }
@@ -499,15 +597,60 @@ public class AshesRecipeService
         // Show raw materials
         if (rawMaterials.Count > 0)
         {
+            // Get all raw material items from database to check tags
+            var matItemIds = rawMaterials.Keys.ToList();
+            var matItems = await context.CachedItems
+                .Where(i => matItemIds.Contains(i.Name))
+                .ToListAsync();
+            
+            var qualityMatNames = new HashSet<string>();
+            
+            // Parse tags and identify quality materials
+            foreach (var matName in rawMaterials.Keys)
+            {
+                var matItem = matItems.FirstOrDefault(i => i.Name == matName);
+                if (matItem != null && !string.IsNullOrEmpty(matItem.Tags))
+                {
+                    try
+                    {
+                        var tags = System.Text.Json.JsonSerializer.Deserialize<List<string>>(matItem.Tags) ?? new List<string>();
+                        
+                        // Check for quality material tags
+                        if (tags.Any(t => t.Equals("Artisanship.Processing", StringComparison.OrdinalIgnoreCase) || 
+                                         t.StartsWith("Artisanship.Gathering.", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            qualityMatNames.Add(matName);
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore JSON parsing errors
+                    }
+                }
+            }
+
             var rawMaterialList = new StringBuilder();
             foreach (var rm in rawMaterials.OrderBy(r => r.Key))
             {
-                rawMaterialList.AppendLine($"• {rm.Key} x{rm.Value}");
+                var prefix = "";
+                
+                if (qualityMatNames.Contains(rm.Key))
+                {
+                    prefix = "✨ ";
+                }
+                
+                rawMaterialList.AppendLine($"• {prefix}{rm.Key} x{rm.Value}");
             }
             var rawMaterialText = rawMaterialList.ToString().TrimEnd();
             if (!string.IsNullOrEmpty(rawMaterialText))
             {
                 embed.AddField("Raw Materials Required", rawMaterialText, inline: false);
+                
+                // Add legend if needed
+                if (qualityMatNames.Any())
+                {
+                    embed.AddField("Legend", "✨ = Quality Material", inline: false);
+                }
             }
         }
 
@@ -738,5 +881,33 @@ public class AshesRecipeService
         if (element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.Number)
             return prop.GetInt32();
         return null;
+    }
+
+    private string GetLevelNameFromNumber(int levelNumber)
+    {
+        return levelNumber switch
+        {
+            0 => "Novice",
+            1 => "Apprentice",
+            2 => "Journeyman",
+            3 => "Master",
+            4 => "Legendary",
+            5 => "Ancient",
+            _ => levelNumber.ToString()
+        };
+    }
+
+    private int GetProfessionLevelFromName(string levelName)
+    {
+        return levelName?.ToLowerInvariant() switch
+        {
+            "novice" => 0,
+            "apprentice" => 1,
+            "journeyman" => 2,
+            "master" => 3,
+            "legendary" => 4,
+            "ancient" => 5,
+            _ => int.TryParse(levelName, out var num) ? num : 0
+        };
     }
 }
