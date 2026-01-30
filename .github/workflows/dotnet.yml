@@ -2,9 +2,9 @@ name: .NET CI/CD
 
 on:
   push:
-    branches: [ "master" ]   # run when pushing to master branch
+    branches: [ "main" ]   # run when pushing to main branch
   pull_request:
-    branches: [ "master" ]   # run when there's a PR to master branch
+    branches: [ "main" ]   # run when there's a PR to main branch
 
 jobs:
   build:
@@ -23,23 +23,23 @@ jobs:
 
       # Restore packages
       - name: Restore dependencies
-        run: dotnet restore src/DiscordBot
+        run: dotnet restore src/PandaBot
 
       # Build project
       - name: Build
-        run: dotnet build src/DiscordBot --configuration Release --no-restore
+        run: dotnet build src/PandaBot --configuration Release --no-restore
 
       # Run tests (if there's a separate test project)
       # - name: Test
-      #   run: dotnet test tests/DiscordBot.Tests --no-build --verbosity normal
+      #   run: dotnet test tests/PandaBot.Tests --no-build --verbosity normal
 
       # Publish to artifacts directory
       - name: Publish
-        run: dotnet publish src/DiscordBot -c Release -o artifacts/DiscordBot
+        run: dotnet publish src/PandaBot -c Release -o artifacts/PandaBot
 
       # Upload artifact to download from GitHub Actions
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DiscordBot
-          path: artifacts/DiscordBot
+          name: PandaBot
+          path: artifacts/PandaBot

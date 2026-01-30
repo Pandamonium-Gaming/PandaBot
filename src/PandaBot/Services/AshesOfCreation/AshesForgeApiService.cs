@@ -465,9 +465,146 @@ public class AshesForgeApiService
         }
     }
 
+    /// <summary>
+    /// Enriches a single recipe with ingredient data on-the-fly
+    /// </summary>
+    public async Task EnrichSingleRecipeAsync(CachedCraftingRecipe recipe)
+    {
+        if (string.IsNullOrEmpty(recipe.OutputItemId))
+        {
+            _logger.LogWarning("Cannot enrich recipe {RecipeName} - no OutputItemId", recipe.Name);
+            return;
+        }
+
+        _logger.LogWarning("=== On-the-fly enrichment for {RecipeName} (ItemId: {ItemId}) ===", 
+            recipe.Name, recipe.OutputItemId);
+
+        try
+        {
+            var itemDetails = await FetchItemDetailsAsync(recipe.OutputItemId);
+            
+            if (!itemDetails.HasValue)
+            {
+                _logger.LogWarning("Failed to fetch item details for {RecipeName}", recipe.Name);
+                return;
+            }
+            
+            var item = itemDetails.Value;
+            
+            // Save the output item with its stats to cache
+            var itemId = GetStringProperty(item, "id") ?? recipe.OutputItemId;
+            var itemName = GetStringProperty(item, "name") ?? recipe.OutputItemName;
+            var iconUrl = GetStringProperty(item, "icon") ?? string.Empty;
+            var rarity = GetStringProperty(item, "rarity") ?? string.Empty;
+            var rawJson = item.GetRawText();
+            
+            _logger.LogWarning("Caching output item {ItemName} with stats", itemName);
+            
+            var existingItem = await _context.CachedItems.FirstOrDefaultAsync(i => i.ItemId == itemId);
+            if (existingItem != null)
+            {
+                existingItem.Name = itemName;
+                existingItem.IconUrl = iconUrl;
+                existingItem.Rarity = rarity;
+                existingItem.RawJson = rawJson;
+                existingItem.LastUpdated = DateTime.UtcNow;
+                _context.CachedItems.Update(existingItem);
+            }
+            else
+            {
+                _context.CachedItems.Add(new CachedItem
+                {
+                    ItemId = itemId,
+                    Name = itemName,
+                    IconUrl = iconUrl,
+                    Rarity = rarity,
+                    RawJson = rawJson,
+                    CachedAt = DateTime.UtcNow,
+                    LastUpdated = DateTime.UtcNow
+                });
+            }
+            
+            // Recipe data is in createdByRecipes array
+            if (item.TryGetProperty("createdByRecipes", out var recipesProperty) && 
+                recipesProperty.ValueKind == JsonValueKind.Array)
+            {
+                var recipesArray = recipesProperty.EnumerateArray().ToList();
+                if (recipesArray.Count > 0)
+                {
+                    // Use the first recipe in the array
+                    var recipeData = recipesArray[0];
+                    
+                    if (recipeData.TryGetProperty("profession", out var profProperty) &&
+                        recipeData.TryGetProperty("certificationLevel", out var levelProperty) &&
+                        recipeData.TryGetProperty("inputs", out var inputsProperty) &&
+                        inputsProperty.ValueKind == JsonValueKind.Array)
+                    {
+                        // Extract profession and level names
+                        var apiProfessionName = string.Empty;
+                        if (profProperty.ValueKind == JsonValueKind.String)
+                            apiProfessionName = profProperty.GetString() ?? string.Empty;
+                        else if (profProperty.ValueKind == JsonValueKind.Object)
+                            apiProfessionName = GetStringProperty(profProperty, "name") ?? string.Empty;
+                        
+                        var apiLevelName = string.Empty;
+                        if (levelProperty.ValueKind == JsonValueKind.String)
+                            apiLevelName = levelProperty.GetString() ?? string.Empty;
+                        else if (levelProperty.ValueKind == JsonValueKind.Object)
+                            apiLevelName = GetStringProperty(levelProperty, "name") ?? string.Empty;
+                        
+                        if (!string.IsNullOrEmpty(apiProfessionName) && !string.IsNullOrEmpty(apiLevelName))
+                        {
+                            _logger.LogWarning("Found recipe - {Profession} {Level}", apiProfessionName, apiLevelName);
+                            
+                            int ingredientCount = 0;
+                            foreach (var inputGroup in inputsProperty.EnumerateArray())
+                            {
+                                var groupQuantity = GetIntProperty(inputGroup, "quantity") ?? 1;
+                                
+                                if (inputGroup.TryGetProperty("items", out var itemsArray) && 
+                                    itemsArray.ValueKind == JsonValueKind.Array)
+                                {
+                                    foreach (var ingredientJson in itemsArray.EnumerateArray())
+                                    {
+                                        var ingredient = new CachedRecipeIngredient
+                                        {
+                                            CachedCraftingRecipeId = recipe.Id,
+                                            ItemId = GetStringProperty(ingredientJson, "id") ?? 
+                                                    GetStringProperty(ingredientJson, "itemId") ?? string.Empty,
+                                            ItemName = GetStringProperty(ingredientJson, "name") ?? 
+                                                      GetStringProperty(ingredientJson, "itemName") ?? string.Empty,
+                                            Quantity = groupQuantity
+                                        };
+                                        
+                                        if (!string.IsNullOrEmpty(ingredient.ItemId) || !string.IsNullOrEmpty(ingredient.ItemName))
+                                        {
+                                            _context.CachedRecipeIngredients.Add(ingredient);
+                                            ingredientCount++;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            await _context.SaveChangesAsync();
+                            _logger.LogWarning("Enriched {RecipeName} with {Count} ingredients", recipe.Name, ingredientCount);
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            _logger.LogWarning("Could not find recipe data for {RecipeName}", recipe.Name);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error enriching {RecipeName}", recipe.Name);
+        }
+    }
+
     public async Task EnrichRecipesWithIngredientsAsync()
     {
-        _logger.LogInformation("Enriching recipes with ingredient data from item details...");
+        _logger.LogWarning("=== Starting recipe enrichment process ===");
+        _logger.LogWarning("Enriching recipes with ingredient data from item details...");
         _logger.LogWarning("This process fetches individual item details and uses aggressive rate limiting to avoid overloading the API.");
         
         var recipes = await _context.CachedCraftingRecipes
@@ -475,10 +612,11 @@ public class AshesForgeApiService
             .Where(r => !r.Ingredients.Any()) // Only recipes without ingredients
             .ToListAsync();
         
-        _logger.LogInformation("Found {Count} recipes without ingredients", recipes.Count);
+        _logger.LogWarning("Found {Count} recipes without ingredients - starting enrichment", recipes.Count);
         
         var enrichedCount = 0;
         var ingredientCount = 0;
+        var failedCount = 0;
         var batchSize = 50; // Smaller batches
         var requestDelay = 1000; // 1 second between requests
         var batchDelay = 5000; // 5 seconds between batches
@@ -489,6 +627,8 @@ public class AshesForgeApiService
             
             if (string.IsNullOrEmpty(recipe.OutputItemId))
             {
+                _logger.LogWarning("Recipe {RecipeName} ({RecipeId}) has no OutputItemId", recipe.Name, recipe.RecipeId);
+                failedCount++;
                 continue;
             }
             
@@ -501,30 +641,62 @@ public class AshesForgeApiService
                 
                 if (!itemDetails.HasValue)
                 {
+                    _logger.LogWarning("Failed to fetch item details for recipe {RecipeName} (OutputItemId: {ItemId})", 
+                        recipe.Name, recipe.OutputItemId);
+                    failedCount++;
                     continue;
                 }
                 
                 var item = itemDetails.Value;
+                _logger.LogWarning("Fetched item for recipe {RecipeName}: {ItemId}", recipe.Name, recipe.OutputItemId);
                 
-                // Check for createdByRecipes
+                // The API may return the recipe directly on the item if it's crafted
+                // Recipe data is in createdByRecipes array
                 if (item.TryGetProperty("createdByRecipes", out var recipesProperty) && 
                     recipesProperty.ValueKind == JsonValueKind.Array)
                 {
-                    foreach (var recipeDetail in recipesProperty.EnumerateArray())
+                    var recipesArray = recipesProperty.EnumerateArray().ToList();
+                    if (recipesArray.Count > 0)
                     {
-                        var recipeId = GetStringProperty(recipeDetail, "id") ?? 
-                                      GetStringProperty(recipeDetail, "recipeId") ?? string.Empty;
+                        var recipeData = recipesArray[0];
                         
-                        // Check if this is the current recipe
-                        if (recipeId != recipe.RecipeId)
-                            continue;
-                        
-                        // Parse ingredients from inputs.items structure
-                        if (recipeDetail.TryGetProperty("inputs", out var inputsProperty) && 
+                        if (recipeData.TryGetProperty("profession", out var profProperty) &&
+                            recipeData.TryGetProperty("certificationLevel", out var levelProperty) &&
+                            recipeData.TryGetProperty("inputs", out var inputsProperty) &&
                             inputsProperty.ValueKind == JsonValueKind.Array)
                         {
+                            // Extract profession name - could be a string or an object with .name
+                            var apiProfessionName = string.Empty;
+                            if (profProperty.ValueKind == JsonValueKind.String)
+                            {
+                                apiProfessionName = profProperty.GetString() ?? string.Empty;
+                            }
+                            else if (profProperty.ValueKind == JsonValueKind.Object)
+                            {
+                                apiProfessionName = GetStringProperty(profProperty, "name") ?? string.Empty;
+                            }
+                            
+                            // Extract level name - could be a string or an object with .name
+                            var apiLevelName = string.Empty;
+                            if (levelProperty.ValueKind == JsonValueKind.String)
+                            {
+                                apiLevelName = levelProperty.GetString() ?? string.Empty;
+                            }
+                            else if (levelProperty.ValueKind == JsonValueKind.Object)
+                            {
+                                apiLevelName = GetStringProperty(levelProperty, "name") ?? string.Empty;
+                            }
+                            
+                            _logger.LogWarning("Found recipe data for {RecipeName} - Profession: {Profession}, Level: {Level}", 
+                                recipe.Name, apiProfessionName, apiLevelName);
+                            
+                            // Parse ingredients directly from the recipe's inputs array
+                            var ontheflyIngredientCount = 0;
                             foreach (var inputGroup in inputsProperty.EnumerateArray())
                             {
+                                // Get quantity from the input group level
+                                var groupQuantity = GetIntProperty(inputGroup, "quantity") ?? 1;
+                                
                                 // Each input group has an "items" array
                                 if (inputGroup.TryGetProperty("items", out var itemsArray) && 
                                     itemsArray.ValueKind == JsonValueKind.Array)
@@ -538,61 +710,56 @@ public class AshesForgeApiService
                                                     GetStringProperty(ingredientJson, "itemId") ?? string.Empty,
                                             ItemName = GetStringProperty(ingredientJson, "name") ?? 
                                                       GetStringProperty(ingredientJson, "itemName") ?? string.Empty,
-                                            Quantity = GetIntProperty(ingredientJson, "quantity") ?? 
-                                                      GetIntProperty(ingredientJson, "amount") ?? 1
+                                            Quantity = groupQuantity
                                         };
-                                        
-                                        // Try to parse quantityExpression if it's a string number
-                                        if (ingredient.Quantity == 1)
-                                        {
-                                            if (ingredientJson.TryGetProperty("quantityExpression", out var qtyExpr) && 
-                                                qtyExpr.ValueKind == JsonValueKind.String &&
-                                                int.TryParse(qtyExpr.GetString(), out var qty))
-                                            {
-                                                ingredient.Quantity = qty;
-                                            }
-                                        }
                                         
                                         if (!string.IsNullOrEmpty(ingredient.ItemId) || !string.IsNullOrEmpty(ingredient.ItemName))
                                         {
                                             _context.CachedRecipeIngredients.Add(ingredient);
-                                            ingredientCount++;
+                                            ontheflyIngredientCount++;
                                         }
                                     }
                                 }
                             }
                             
+                            await _context.SaveChangesAsync();
+                            _logger.LogWarning("Background enriched recipe {RecipeName} with {Count} ingredients", 
+                                recipe.Name, ontheflyIngredientCount);
                             enrichedCount++;
-                            break;
+                            ingredientCount += ontheflyIngredientCount;
                         }
-                        
-                        enrichedCount++;
-                        break;
                     }
                 }
-                
-                // Save in batches and add delay between batches
-                if ((i + 1) % batchSize == 0)
+                else
                 {
-                    await _context.SaveChangesAsync();
-                    _logger.LogInformation("Progress: {Current}/{Total} recipes processed ({Percent}%), {Enriched} enriched, {Ingredients} ingredients added. Pausing for {Delay}s...", 
-                        i + 1, recipes.Count, ((i + 1) * 100 / recipes.Count), enrichedCount, ingredientCount, batchDelay / 1000);
-                    
-                    // Longer pause between batches to be extra respectful
-                    await Task.Delay(batchDelay);
+                    _logger.LogWarning("Recipe {RecipeName} - no createdByRecipes found in item data", recipe.Name);
+                    failedCount++;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Error enriching recipe {RecipeName}", recipe.Name);
+                failedCount++;
+            }
+            
+            // Save in batches and add delay between batches
+            if ((i + 1) % batchSize == 0)
+            {
+                await _context.SaveChangesAsync();
+                _logger.LogWarning("Progress: {Current}/{Total} recipes processed ({Percent}%), {Enriched} enriched, {Ingredients} ingredients added. Pausing for {Delay}s...", 
+                    i + 1, recipes.Count, ((i + 1) * 100 / recipes.Count), enrichedCount, ingredientCount, batchDelay / 1000);
+                
+                // Longer pause between batches to be extra respectful
+                await Task.Delay(batchDelay);
             }
         }
         
         // Save remaining changes
         await _context.SaveChangesAsync();
         
-        _logger.LogInformation("Recipe enrichment complete: {Enriched} recipes enriched with {Ingredients} total ingredients", 
-            enrichedCount, ingredientCount);
+        _logger.LogWarning("=== Recipe enrichment complete ===");
+        _logger.LogWarning("Results: {Enriched} recipes enriched with {Ingredients} total ingredients ({Failed} failed)", 
+            enrichedCount, ingredientCount, failedCount);
         _logger.LogInformation("Total API calls made: {Count} over approximately {Minutes} minutes", 
             enrichedCount, (enrichedCount * requestDelay / 1000 / 60));
     }
@@ -696,6 +863,36 @@ public class AshesForgeApiService
         if (element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.True)
             return true;
         return false;
+    }
+
+    private int GetProfessionLevelFromName(string levelName)
+    {
+        return levelName switch
+        {
+            "Novice" => 1,
+            "Apprentice" => 2,
+            "Journeyman" => 3,
+            "Artisan" => 4,
+            "Master" => 5,
+            "Expert" => 6,
+            "Grandmaster" => 7,
+            _ => 0
+        };
+    }
+
+    private string GetLevelNameFromNumber(int levelNumber)
+    {
+        return levelNumber switch
+        {
+            1 => "Novice",
+            2 => "Apprentice",
+            3 => "Journeyman",
+            4 => "Artisan",
+            5 => "Master",
+            6 => "Expert",
+            7 => "Grandmaster",
+            _ => "Unknown"
+        };
     }
 
     private CachedCraftingRecipe ParseRecipeFromJson(JsonElement recipeJson, string rawJson)

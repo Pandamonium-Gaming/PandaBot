@@ -20,7 +20,7 @@ public class AshesForgeDataCacheService : BackgroundService
         // Wait 10 seconds for bot to fully start
         await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
 
-        _logger.LogInformation("Starting AshesForge data cache service...");
+        _logger.LogWarning("=== Starting AshesForge data cache service ===");
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -30,43 +30,35 @@ public class AshesForgeDataCacheService : BackgroundService
                 var apiService = scope.ServiceProvider.GetRequiredService<AshesForgeApiService>();
                 
                 // Cache items
-                _logger.LogInformation("Fetching and caching items from API...");
-                await Task.Run(async () =>
+                _logger.LogWarning("Fetching and caching items from API...");
+                var items = await apiService.FetchAllItemsAsync();
+                
+                if (items.Count > 0)
                 {
-                    var items = await apiService.FetchAllItemsAsync();
-                    
-                    if (items.Count > 0)
-                    {
-                        _logger.LogInformation("Successfully cached {Count} items", items.Count);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("No items fetched from API");
-                    }
-                }, stoppingToken);
+                    _logger.LogWarning("Successfully cached {Count} items", items.Count);
+                }
+                else
+                {
+                    _logger.LogWarning("No items fetched from API");
+                }
 
                 // Cache recipes
-                _logger.LogInformation("Fetching and caching recipes from API...");
-                await Task.Run(async () =>
+                _logger.LogWarning("Fetching and caching recipes from API...");
+                var recipes = await apiService.FetchAllRecipesAsync();
+                
+                if (recipes.Count > 0)
                 {
-                    var recipes = await apiService.FetchAllRecipesAsync();
-                    
-                    if (recipes.Count > 0)
-                    {
-                        _logger.LogInformation("Successfully cached {Count} recipes", recipes.Count);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("No recipes fetched from API");
-                    }
-                }, stoppingToken);
+                    _logger.LogWarning("Successfully cached {Count} recipes", recipes.Count);
+                }
+                else
+                {
+                    _logger.LogWarning("No recipes fetched from API");
+                }
 
                 // Enrich recipes with ingredient data from item details
-                _logger.LogInformation("Enriching recipes with ingredient data...");
-                await Task.Run(async () =>
-                {
-                    await apiService.EnrichRecipesWithIngredientsAsync();
-                }, stoppingToken);
+                _logger.LogWarning("=== Starting enrichment of recipes with ingredient data ===");
+                await apiService.EnrichRecipesWithIngredientsAsync();
+                _logger.LogWarning("=== Enrichment process completed ===");
 
                 // TODO: Mobs endpoint doesn't exist yet on AshesForge API
                 // Uncomment this when the endpoint becomes available

@@ -48,31 +48,13 @@ public class DiscordBotService
             return;
         }
 
-        _logger.LogInformation("Loading interaction service modules...");
         await _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
-        
-        var modules = _interactionService.Modules;
-        _logger.LogInformation("Loaded {ModuleCount} modules:", modules.Count);
-        foreach (var module in modules)
-        {
-            _logger.LogInformation("  Module: {ModuleName} with {CommandCount} slash commands, {ComponentCount} component commands", 
-                module.Name, module.SlashCommands.Count, module.ComponentCommands.Count);
-            foreach (var command in module.SlashCommands)
-            {
-                _logger.LogInformation("    - /{CommandName}: {Description}", command.Name, command.Description);
-            }
-            foreach (var component in module.ComponentCommands)
-            {
-                _logger.LogInformation("    - Component: {CustomId}", component.Name);
-            }
-        }
 
         await _client.LoginAsync(TokenType.Bot, _config.Token);
         await _client.StartAsync();
 
         _logger.LogInformation("Waiting for bot to be ready...");
         await _readyCompletionSource.Task;
-        _logger.LogInformation("Bot is ready and guilds are cached");
     }
 
     public async Task StopAsync()
@@ -100,33 +82,30 @@ public class DiscordBotService
 
     private Task ReadyAsync()
     {
-        _logger.LogInformation("Bot {Username} is connected and ready!", _client.CurrentUser.Username);
-        _logger.LogInformation("Client has {GuildCount} guilds in cache", _client.Guilds.Count);
+        _logger.LogInformation("Bot connected and ready");
         
-        foreach (var guild in _client.Guilds)
-        {
-            _logger.LogInformation("Guild: {GuildName} ({GuildId})", guild.Name, guild.Id);
-        }
-
         _ = Task.Run(async () =>
         {
             await Task.Delay(2000);
             
-            _logger.LogInformation("After delay, client has {GuildCount} guilds", _client.Guilds.Count);
-            foreach (var guild in _client.Guilds)
+            try
             {
-                _logger.LogInformation("Guild now available: {GuildName} ({GuildId})", guild.Name, guild.Id);
+                if (_config.GuildId.HasValue)
+                {
+                    _logger.LogInformation("Registering commands to guild...");
+                    var commands = await _interactionService.RegisterCommandsToGuildAsync(_config.GuildId.Value);
+                    _logger.LogInformation("Registered {CommandCount} commands", commands.Count);
+                }
+                else
+                {
+                    _logger.LogInformation("Registering commands globally...");
+                    var commands = await _interactionService.RegisterCommandsGloballyAsync();
+                    _logger.LogInformation("Registered {CommandCount} commands globally", commands.Count);
+                }
             }
-            
-            if (_config.GuildId.HasValue)
+            catch (Exception ex)
             {
-                await _interactionService.RegisterCommandsToGuildAsync(_config.GuildId.Value);
-                _logger.LogInformation("Slash commands registered to guild {GuildId}", _config.GuildId.Value);
-            }
-            else
-            {
-                await _interactionService.RegisterCommandsGloballyAsync();
-                _logger.LogInformation("Slash commands registered globally");
+                _logger.LogError(ex, "Error registering commands");
             }
             
             _readyCompletionSource.SetResult(true);
