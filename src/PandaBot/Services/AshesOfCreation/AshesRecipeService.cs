@@ -105,24 +105,26 @@ public class AshesRecipeService
             {
                 using var scope = _serviceProvider.CreateScope();
                 var apiService = scope.ServiceProvider.GetRequiredService<AshesForgeApiService>();
-                await apiService.EnrichSingleRecipeAsync(recipe);
                 
-                _logger.LogWarning("On-the-fly enrichment completed for {RecipeId}", recipeId);
+                // Fire and forget - enrich in background without blocking the interaction
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await apiService.EnrichSingleRecipeAsync(recipe);
+                        _logger.LogWarning("Background enrichment completed for {RecipeId}", recipeId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Background enrichment failed for {RecipeId}", recipeId);
+                    }
+                });
                 
-                // Reload the recipe to get updated ingredients
-                var enrichedRecipe = await context.CachedCraftingRecipes
-                    .Include(r => r.Ingredients)
-                    .FirstOrDefaultAsync(r => r.RecipeId == recipeId);
-                
-                _logger.LogWarning("Reloaded recipe after enrichment: {RecipeId} now has {IngredientCount} ingredients", 
-                    recipeId, enrichedRecipe?.Ingredients.Count ?? 0);
-                
-                return enrichedRecipe;
+                _logger.LogWarning("Started background enrichment task for {RecipeId}", recipeId);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to enrich recipe {RecipeId} on-the-fly", recipeId);
-                // Fall through and return recipe without ingredients
+                _logger.LogWarning(ex, "Failed to start background enrichment for {RecipeId}", recipeId);
             }
         }
         

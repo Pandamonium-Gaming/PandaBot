@@ -255,22 +255,48 @@ public class AshesModule : InteractionModuleBase<SocketInteractionContext>
         [Summary("name", "The name of the recipe or output item to search for")] string name,
         [Summary("exact", "Whether to search for exact matches only")] bool exact = false)
     {
-        await DeferAsync();
-        
+        var commandStartTime = DateTime.UtcNow;
         var logger = Services.GetRequiredService<ILogger<AshesModule>>();
-        logger.LogInformation("User {UserId} searching for recipe: '{RecipeName}' (Exact: {Exact})", 
-            Context.User.Id, name, exact);
+        logger.LogInformation("RecipeCommand START - User: {UserId}, Name: '{RecipeName}', Exact: {Exact}, Time: {Time:HH:mm:ss.fff}", 
+            Context.User.Id, name, exact, commandStartTime);
         
         try
         {
-            var recipeService = Services.GetRequiredService<AshesRecipeService>();
-            var apiService = Services.GetRequiredService<AshesForgeApiService>();
-            using var scope = Services.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<PandaBotContext>();
-            
+            var deferStartTime = DateTime.UtcNow;
+            await DeferAsync();
+            var deferEndTime = DateTime.UtcNow;
+            logger.LogInformation("DeferAsync completed in {Ms}ms", (deferEndTime - deferStartTime).TotalMilliseconds);
+        }
+        catch (TimeoutException ex)
+        {
+            logger.LogError(ex, "DeferAsync timeout after {Ms}ms", (DateTime.UtcNow - commandStartTime).TotalMilliseconds);
+            // If defer times out, try to respond directly
+            try
+            {
+                await RespondAsync("Command processing timed out. Please try again.", ephemeral: true);
+            }
+            catch
+            {
+                // If both fail, nothing we can do
+            }
+            return;
+        }
+        
+        logger.LogInformation("RecipeCommand - Getting services at {Time:HH:mm:ss.fff}", DateTime.UtcNow);
+        var recipeService = Services.GetRequiredService<AshesRecipeService>();
+        var apiService = Services.GetRequiredService<AshesForgeApiService>();
+        using var scope = Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PandaBotContext>();
+        logger.LogInformation("RecipeCommand - Services obtained, elapsed: {Ms}ms", (DateTime.UtcNow - commandStartTime).TotalMilliseconds);
+        
+        try
+        {
+            var searchStartTime = DateTime.UtcNow;
+            logger.LogInformation("SearchRecipesAsync START at {Time:HH:mm:ss.fff}", searchStartTime);
             var results = await recipeService.SearchRecipesAsync(context, name, exact);
-
-            logger.LogInformation("Search returned {Count} result(s) from cache", results.Count);
+            var searchEndTime = DateTime.UtcNow;
+            logger.LogInformation("SearchRecipesAsync completed in {Ms}ms, returned {Count} results", 
+                (searchEndTime - searchStartTime).TotalMilliseconds, results.Count);
 
             // If no results in cache, try live API search
             if (results.Count == 0)
@@ -312,15 +338,29 @@ public class AshesModule : InteractionModuleBase<SocketInteractionContext>
 
             if (results.Count == 1)
             {
+                logger.LogInformation("Single result found, loading full recipe at {Time:HH:mm:ss.fff}", DateTime.UtcNow);
+                
                 // Load the full recipe with ingredients (will enrich on-the-fly if needed)
+                var loadStartTime = DateTime.UtcNow;
                 var fullRecipe = await recipeService.GetRecipeByIdAsync(context, results[0].RecipeId);
+                var loadEndTime = DateTime.UtcNow;
+                logger.LogInformation("GetRecipeByIdAsync completed in {Ms}ms", (loadEndTime - loadStartTime).TotalMilliseconds);
+                
                 if (fullRecipe != null)
                 {
+                    var embedStartTime = DateTime.UtcNow;
                     var recipeEmbed = await recipeService.BuildRecipeEmbedAsync(context, fullRecipe);
+                    var embedEndTime = DateTime.UtcNow;
+                    logger.LogInformation("BuildRecipeEmbedAsync completed in {Ms}ms", (embedEndTime - embedStartTime).TotalMilliseconds);
+                    
+                    var followupStartTime = DateTime.UtcNow;
                     await FollowupAsync(embed: recipeEmbed);
+                    var followupEndTime = DateTime.UtcNow;
+                    logger.LogInformation("FollowupAsync (embed) completed in {Ms}ms", (followupEndTime - followupStartTime).TotalMilliseconds);
                 }
                 else
                 {
+                    logger.LogWarning("Recipe not found for ID: {RecipeId}", results[0].RecipeId);
                     await FollowupAsync("Recipe not found.");
                 }
                 
@@ -329,11 +369,16 @@ public class AshesModule : InteractionModuleBase<SocketInteractionContext>
                     .WithButton("View Raw Materials", $"raw_materials:{results[0].RecipeId}:{Context.User.Id}", ButtonStyle.Secondary)
                     .Build();
                 
+                var buttonFollowupStartTime = DateTime.UtcNow;
                 await FollowupAsync(components: buttons);
+                var buttonFollowupEndTime = DateTime.UtcNow;
+                logger.LogInformation("FollowupAsync (buttons) completed in {Ms}ms", (buttonFollowupEndTime - buttonFollowupStartTime).TotalMilliseconds);
+                logger.LogInformation("RecipeCommand COMPLETE - Total time: {Ms}ms", (DateTime.UtcNow - commandStartTime).TotalMilliseconds);
                 return;
             }
 
             // Multiple results - show selection menu
+            logger.LogInformation("Multiple results ({Count}), building selection menu at {Time:HH:mm:ss.fff}", results.Count, DateTime.UtcNow);
             var selectMenu = new SelectMenuBuilder()
                 .WithCustomId($"recipe_select:{Context.User.Id}")
                 .WithPlaceholder($"Select a recipe ({results.Count} results)")
@@ -362,12 +407,23 @@ public class AshesModule : InteractionModuleBase<SocketInteractionContext>
                 .WithColor(Color.Gold)
                 .Build();
 
+            var menuFollowupStartTime = DateTime.UtcNow;
             await FollowupAsync(embed: selectionEmbed, components: component);
+            var menuFollowupEndTime = DateTime.UtcNow;
+            logger.LogInformation("FollowupAsync (menu) completed in {Ms}ms", (menuFollowupEndTime - menuFollowupStartTime).TotalMilliseconds);
+            logger.LogInformation("RecipeCommand COMPLETE - Total time: {Ms}ms", (DateTime.UtcNow - commandStartTime).TotalMilliseconds);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error processing recipe search for '{RecipeName}'", name);
-            await FollowupAsync($"An error occurred while searching for '{name}': {ex.Message}");
+            logger.LogError(ex, "Error processing recipe search for '{RecipeName}' - Total elapsed: {Ms}ms", name, (DateTime.UtcNow - commandStartTime).TotalMilliseconds);
+            try
+            {
+                await FollowupAsync($"An error occurred while searching for '{name}': {ex.Message}");
+            }
+            catch (Exception followupEx)
+            {
+                logger.LogError(followupEx, "Failed to send error followup");
+            }
         }
     }
 
@@ -416,39 +472,73 @@ public class AshesModule : InteractionModuleBase<SocketInteractionContext>
     [ComponentInteraction("raw_materials:*:*", true)]
     public async Task HandleRawMaterialsButton(string recipeId, string userId)
     {
-        await DeferAsync();
-        
+        var buttonStartTime = DateTime.UtcNow;
         var logger = Services.GetRequiredService<ILogger<AshesModule>>();
-        logger.LogWarning("HandleRawMaterialsButton - UserId: {UserId}, RecipeId: {RecipeId}", userId, recipeId);
+        logger.LogWarning("HandleRawMaterialsButton START - UserId: {UserId}, RecipeId: {RecipeId}, Time: {Time:HH:mm:ss.fff}", 
+            userId, recipeId, buttonStartTime);
+        
+        try
+        {
+            var deferStartTime = DateTime.UtcNow;
+            await DeferAsync();
+            var deferEndTime = DateTime.UtcNow;
+            logger.LogInformation("DeferAsync completed in {Ms}ms", (deferEndTime - deferStartTime).TotalMilliseconds);
+        }
+        catch (TimeoutException ex)
+        {
+            logger.LogError(ex, "DeferAsync timeout after {Ms}ms", (DateTime.UtcNow - buttonStartTime).TotalMilliseconds);
+            return;
+        }
         
         try
         {
             if (Context.User.Id.ToString() != userId)
             {
+                logger.LogWarning("User mismatch - Context: {ContextUserId}, Expected: {UserId}", Context.User.Id, userId);
                 await FollowupAsync("This button is not for you.", ephemeral: true);
                 return;
             }
 
+            logger.LogInformation("Getting services at {Time:HH:mm:ss.fff}", DateTime.UtcNow);
             var recipeService = Services.GetRequiredService<AshesRecipeService>();
             var apiService = Services.GetRequiredService<AshesForgeApiService>();
             using var scope = Services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<PandaBotContext>();
 
+            var loadStartTime = DateTime.UtcNow;
             var recipe = await recipeService.GetRecipeByIdAsync(context, recipeId);
+            var loadEndTime = DateTime.UtcNow;
+            logger.LogInformation("GetRecipeByIdAsync completed in {Ms}ms", (loadEndTime - loadStartTime).TotalMilliseconds);
 
             if (recipe == null)
             {
+                logger.LogWarning("Recipe not found for ID: {RecipeId}", recipeId);
                 await FollowupAsync("Recipe not found.");
                 return;
             }
 
+            var embedStartTime = DateTime.UtcNow;
             var embed = await recipeService.BuildRecipeWithRawMaterialsEmbedAsync(context, recipe, apiService);
+            var embedEndTime = DateTime.UtcNow;
+            logger.LogInformation("BuildRecipeWithRawMaterialsEmbedAsync completed in {Ms}ms", (embedEndTime - embedStartTime).TotalMilliseconds);
+            
+            var followupStartTime = DateTime.UtcNow;
             await FollowupAsync(embed: embed);
+            var followupEndTime = DateTime.UtcNow;
+            logger.LogInformation("FollowupAsync completed in {Ms}ms", (followupEndTime - followupStartTime).TotalMilliseconds);
+            logger.LogInformation("HandleRawMaterialsButton COMPLETE - Total time: {Ms}ms", (DateTime.UtcNow - buttonStartTime).TotalMilliseconds);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error handling raw materials button");
-            await FollowupAsync($"An error occurred: {ex.Message}", ephemeral: true);
+            logger.LogError(ex, "Error handling raw materials button - Total elapsed: {Ms}ms", (DateTime.UtcNow - buttonStartTime).TotalMilliseconds);
+            try
+            {
+                await FollowupAsync($"An error occurred: {ex.Message}", ephemeral: true);
+            }
+            catch (Exception followupEx)
+            {
+                logger.LogError(followupEx, "Failed to send error followup");
+            }
         }
     }
     
