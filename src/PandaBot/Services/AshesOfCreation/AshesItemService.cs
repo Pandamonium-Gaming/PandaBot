@@ -156,6 +156,28 @@ public class AshesItemService
             }
 
             embed.AddField("📜 Crafting Recipes", recipeText.ToString(), inline: false);
+
+            // Calculate highest required skill level across all recipes using this item
+            var recipesByProfession = recipes
+                .GroupBy(r => r.Profession)
+                .Select(g => new
+                {
+                    Profession = g.Key,
+                    MaxLevel = g.Max(r => r.ProfessionLevel)
+                })
+                .OrderByDescending(x => x.MaxLevel)
+                .ToList();
+
+            if (recipesByProfession.Any())
+            {
+                var skillText = new StringBuilder();
+                foreach (var prof in recipesByProfession)
+                {
+                    var levelName = GetLevelNameFromNumber(prof.MaxLevel);
+                    skillText.AppendLine($"• {prof.Profession} - {levelName}");
+                }
+                embed.AddField("⚙️ Highest Required Skill", skillText.ToString().TrimEnd(), inline: false);
+            }
         }
 
         // Stats
@@ -245,6 +267,20 @@ public class AshesItemService
             "legendary" => Color.Orange,
             "artifact" => Color.Red,
             _ => Color.Default
+        };
+    }
+
+    private string GetLevelNameFromNumber(int levelNumber)
+    {
+        return levelNumber switch
+        {
+            0 => "Novice",
+            1 => "Apprentice",
+            2 => "Journeyman",
+            3 => "Master",
+            4 => "Legendary",
+            5 => "Ancient",
+            _ => levelNumber.ToString()
         };
     }
 }

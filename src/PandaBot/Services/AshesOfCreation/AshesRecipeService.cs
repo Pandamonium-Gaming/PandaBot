@@ -434,7 +434,7 @@ public class AshesRecipeService
         
         var ingredients = recipe.Ingredients?.ToList() ?? new List<CachedRecipeIngredient>();
         var rawMaterials = new Dictionary<string, int>();
-        var requiredProfessions = new Dictionary<string, string>();  // profession -> tier name
+        var requiredProfessions = new HashSet<string>();  // profession -> tier name
         
         // Add the main recipe's profession - extract from RawJson if available
         var mainProfessionLevel = recipe.ProfessionLevel.ToString();
@@ -444,7 +444,7 @@ public class AshesRecipeService
             if (certLevel != null)
                 mainProfessionLevel = certLevel;
         }
-        requiredProfessions[recipe.Profession] = mainProfessionLevel;
+        requiredProfessions.Add($"{recipe.Profession} - {mainProfessionLevel}");
         
         // Fetch raw materials and collect required professions
         await FetchRawMaterialsRecursiveAsync(context, ingredients, rawMaterials, apiService, depth: 0, maxDepth: 5, requiredProfessions: requiredProfessions);
