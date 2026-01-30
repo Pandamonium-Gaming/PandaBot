@@ -155,7 +155,10 @@ public class AshesItemService
             creatingText.AppendLine($"**Crafted by {creatingRecipes.Count} recipe(s):**");
             foreach (var recipe in creatingRecipes.Take(5))
             {
-                creatingText.AppendLine($"• {recipe.Name} ({recipe.Profession} - {GetLevelNameFromNumber(recipe.ProfessionLevel)})");
+                var allRequiredProfs = await GetAllRequiredProfessionsForRecipeAsync(context, recipe);
+                var recipeProf = allRequiredProfs.FirstOrDefault(p => p.Key == recipe.Profession);
+                var highestLevel = recipeProf.Value;
+                creatingText.AppendLine($"• {recipe.Name} ({recipe.Profession} - {GetLevelNameFromNumber(highestLevel)})");
             }
             embed.AddField("🔨 Crafted By", creatingText.ToString().TrimEnd(), inline: false);
         }
@@ -336,5 +339,57 @@ public class AshesItemService
             5 => "Ancient",
             _ => levelNumber.ToString()
         };
+    }
+
+    private async Task<Dictionary<string, int>> GetAllRequiredProfessionsForRecipeAsync(
+        PandaBotContext context,
+        CachedCraftingRecipe recipe,
+        HashSet<int>? visitedRecipes = null,
+        int maxDepth = 5,
+        int currentDepth = 0)
+    {
+        visitedRecipes ??= new HashSet<int>();
+        var requiredProfessions = new Dictionary<string, int>();
+        
+        if (currentDepth >= maxDepth || visitedRecipes.Contains(recipe.Id))
+        {
+            // Add the recipe's own profession
+            requiredProfessions[recipe.Profession] = recipe.ProfessionLevel;
+            return requiredProfessions;
+        }
+        
+        visitedRecipes.Add(recipe.Id);
+        
+        // Add the recipe's own profession
+        requiredProfessions[recipe.Profession] = recipe.ProfessionLevel;
+        
+        // Load ingredients for this recipe
+        var recipeWithIngredients = await context.CachedCraftingRecipes
+            .Include(r => r.Ingredients)
+            .FirstOrDefaultAsync(r => r.Id == recipe.Id);
+        
+        if (recipeWithIngredients?.Ingredients?.Any() == true)
+        {
+            var ingredientIds = recipeWithIngredients.Ingredients.Select(i => i.ItemId).ToList();
+            var ingredientRecipes = await context.CachedCraftingRecipes
+                .Where(r => ingredientIds.Contains(r.OutputItemId))
+                .ToListAsync();
+            
+            foreach (var ingredientRecipe in ingredientRecipes)
+            {
+                var ingredientProfs = await GetAllRequiredProfessionsForRecipeAsync(
+                    context, ingredientRecipe, visitedRecipes, maxDepth, currentDepth + 1);
+                
+                foreach (var prof in ingredientProfs)
+                {
+                    if (!requiredProfessions.ContainsKey(prof.Key))
+                        requiredProfessions[prof.Key] = prof.Value;
+                    else
+                        requiredProfessions[prof.Key] = Math.Max(requiredProfessions[prof.Key], prof.Value);
+                }
+            }
+        }
+        
+        return requiredProfessions;
     }
 }

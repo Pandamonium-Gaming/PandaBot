@@ -941,15 +941,47 @@ public class AshesForgeApiService
     {
         return levelName switch
         {
-            "Novice" => 1,
-            "Apprentice" => 2,
-            "Journeyman" => 3,
-            "Artisan" => 4,
-            "Master" => 5,
-            "Expert" => 6,
-            "Grandmaster" => 7,
+            "Novice" => 0,
+            "Apprentice" => 1,
+            "Journeyman" => 2,
+            "Artisan" => 3,
+            "Master" => 4,
+            "Expert" => 5,
+            "Legendary" => 4,
+            "Ancient" => 5,
             _ => 0
         };
+    }
+
+    private int GetProfessionLevel(JsonElement recipeJson)
+    {
+        // Try direct integer properties first
+        if (GetIntProperty(recipeJson, "professionLevel") is int profLevel)
+            return profLevel;
+        
+        if (GetIntProperty(recipeJson, "level") is int level)
+            return level;
+        
+        // Try certificationLevel as object with name property
+        if (recipeJson.TryGetProperty("certificationLevel", out var certLevel))
+        {
+            if (certLevel.ValueKind == JsonValueKind.Object && certLevel.TryGetProperty("name", out var certName))
+            {
+                var levelName = GetStringProperty(certLevel, "name") ?? string.Empty;
+                return GetProfessionLevelFromName(levelName);
+            }
+            else if (certLevel.ValueKind == JsonValueKind.String)
+            {
+                var levelName = certLevel.GetString() ?? string.Empty;
+                return GetProfessionLevelFromName(levelName);
+            }
+            else if (certLevel.ValueKind == JsonValueKind.Number && certLevel.TryGetInt32(out var intVal))
+            {
+                return intVal;
+            }
+        }
+        
+        return 0;
     }
 
     private string GetLevelNameFromNumber(int levelNumber)
@@ -1031,9 +1063,7 @@ public class AshesForgeApiService
             RecipeId = GetStringProperty(recipeJson, "id") ?? Guid.NewGuid().ToString(),
             Name = GetStringProperty(recipeJson, "name") ?? "Unknown Recipe",
             Profession = GetStringProperty(recipeJson, "profession") ?? string.Empty,
-            ProfessionLevel = GetIntProperty(recipeJson, "professionLevel") ?? 
-                             GetIntProperty(recipeJson, "certificationLevel") ?? 
-                             GetIntProperty(recipeJson, "level") ?? 0,
+            ProfessionLevel = GetProfessionLevel(recipeJson),
             OutputItemId = outputItemId,
             OutputItemName = outputItemName,
             OutputQuantity = GetIntProperty(recipeJson, "outputQuantity") ?? 
