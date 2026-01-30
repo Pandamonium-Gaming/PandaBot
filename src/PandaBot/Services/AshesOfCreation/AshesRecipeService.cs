@@ -462,7 +462,7 @@ public class AshesRecipeService
                 
                 if (recipeForIngredient != null && recipeForIngredient.Ingredients.Any())
                 {
-                    _logger.LogWarning("  ✓ Found recipe for {ItemName} - {ProfessionName} Lvl {Level}", 
+                    _logger.LogWarning("  ✓ Found recipe for {ItemName} in cache - {ProfessionName} Lvl {Level}", 
                         ingredient.ItemName, recipeForIngredient.Profession, recipeForIngredient.ProfessionLevel);
                     
                     // Recurse into this recipe's ingredients, multiplying quantities by parent quantity
@@ -479,6 +479,58 @@ public class AshesRecipeService
                         subIngredients.Count, ingredient.ItemName, ingredient.Quantity);
                     await FetchRawMaterialsRecursiveAsync(context, subIngredients, rawMaterials, apiService, depth + 1, maxDepth);
                     continue;
+                }
+
+                // Not in cache - try fetching from API as fallback
+                if (!string.IsNullOrEmpty(ingredient.ItemId))
+                {
+                    _logger.LogWarning("  ↻ Not in cache, checking API for recipe for {ItemName}...", ingredient.ItemName);
+                    
+                    var apiRecipe = await apiService.GetRecipeForItemAsync(ingredient.ItemId);
+                    if (apiRecipe != null)
+                    {
+                        _logger.LogWarning("  ✓ Found recipe for {ItemName} via API - enriching...", ingredient.ItemName);
+                        
+                        // Extract ingredients from API response
+                        var subIngredients = new List<CachedRecipeIngredient>();
+                        if (apiRecipe.ContainsKey("createdByRecipes") && apiRecipe["createdByRecipes"] is System.Text.Json.JsonElement recipes)
+                        {
+                            var recipeArray = recipes.EnumerateArray().FirstOrDefault();
+                            if (recipeArray.TryGetProperty("inputs", out var inputs))
+                            {
+                                foreach (var inputGroup in inputs.EnumerateArray())
+                                {
+                                    if (inputGroup.TryGetProperty("items", out var items))
+                                    {
+                                        foreach (var item in items.EnumerateArray())
+                                        {
+                                            var itemId = item.TryGetProperty("id", out var id) ? id.GetString() : null;
+                                            var itemName = item.TryGetProperty("name", out var name) ? name.GetString() : "Unknown";
+                                            var quantity = item.TryGetProperty("quantity", out var qty) ? qty.GetInt32() : 1;
+                                            
+                                            if (!string.IsNullOrEmpty(itemId))
+                                            {
+                                                subIngredients.Add(new CachedRecipeIngredient
+                                                {
+                                                    ItemId = itemId,
+                                                    ItemName = itemName ?? "Unknown",
+                                                    Quantity = quantity * ingredient.Quantity
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (subIngredients.Any())
+                        {
+                            _logger.LogWarning("  Recursing into {Count} sub-ingredients from API for {ItemName} (quantity multiplier: {ParentQty})", 
+                                subIngredients.Count, ingredient.ItemName, ingredient.Quantity);
+                            await FetchRawMaterialsRecursiveAsync(context, subIngredients, rawMaterials, apiService, depth + 1, maxDepth);
+                            continue;
+                        }
+                    }
                 }
 
                 _logger.LogWarning("  → {ItemName} is a raw material (no recipe found)", ingredient.ItemName);

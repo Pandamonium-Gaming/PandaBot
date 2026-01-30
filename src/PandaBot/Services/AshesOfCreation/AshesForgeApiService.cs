@@ -1073,4 +1073,37 @@ public class AshesForgeApiService
             LastUpdated = DateTime.UtcNow
         };
     }
+
+    /// <summary>
+    /// Fetches recipe data for an item from the API (what creates this item)
+    /// Returns the item details which includes createdByRecipes array
+    /// </summary>
+    public async Task<Dictionary<string, JsonElement>?> GetRecipeForItemAsync(string itemId)
+    {
+        try
+        {
+            var itemDetails = await FetchItemDetailsAsync(itemId);
+            if (!itemDetails.HasValue)
+            {
+                _logger.LogDebug("No item details found for {ItemId}", itemId);
+                return null;
+            }
+
+            var item = itemDetails.Value;
+            
+            // Convert to Dictionary for easier access in caller
+            var result = new Dictionary<string, JsonElement>();
+            foreach (var property in item.EnumerateObject())
+            {
+                result[property.Name] = property.Value;
+            }
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Error fetching recipe for item {ItemId}", itemId);
+            return null;
+        }
+    }
 }
