@@ -605,17 +605,7 @@ public class AshesForgeApiService
                                     if (string.IsNullOrEmpty(ingredient.ItemId))
                                         continue;
                                     
-                                    // Check if already cached
-                                    var cachedItem = await _context.CachedItems
-                                        .FirstOrDefaultAsync(i => i.ItemId == ingredient.ItemId);
-                                    
-                                    if (cachedItem != null)
-                                    {
-                                        _logger.LogWarning("  {ItemName} already cached, skipping fetch", ingredient.ItemName);
-                                        continue;
-                                    }
-                                    
-                                    // Fetch ingredient details
+                                    // Fetch ingredient details - always refresh to ensure we have createdByRecipes
                                     _logger.LogWarning("  Fetching ingredient {ItemName} ({ItemId})...", ingredient.ItemName, ingredient.ItemId);
                                     var ingredientDetails = await FetchItemDetailsAsync(ingredient.ItemId);
                                     
@@ -627,18 +617,34 @@ public class AshesForgeApiService
                                         var ingredientRarity = GetStringProperty(ingredientItem, "rarity") ?? string.Empty;
                                         var ingredientRawJson = ingredientItem.GetRawText();
                                         
-                                        _context.CachedItems.Add(new CachedItem
-                                        {
-                                            ItemId = ingredient.ItemId,
-                                            Name = ingredientName,
-                                            IconUrl = ingredientIconUrl,
-                                            Rarity = ingredientRarity,
-                                            RawJson = ingredientRawJson,
-                                            CachedAt = DateTime.UtcNow,
-                                            LastUpdated = DateTime.UtcNow
-                                        });
+                                        // Check if already exists and update, or add new
+                                        var cachedIngredientItem = await _context.CachedItems
+                                            .FirstOrDefaultAsync(i => i.ItemId == ingredient.ItemId);
                                         
-                                        _logger.LogWarning("    ✓ Cached ingredient {ItemName}", ingredientName);
+                                        if (cachedIngredientItem != null)
+                                        {
+                                            cachedIngredientItem.Name = ingredientName;
+                                            cachedIngredientItem.IconUrl = ingredientIconUrl;
+                                            cachedIngredientItem.Rarity = ingredientRarity;
+                                            cachedIngredientItem.RawJson = ingredientRawJson;
+                                            cachedIngredientItem.LastUpdated = DateTime.UtcNow;
+                                            _context.CachedItems.Update(cachedIngredientItem);
+                                            _logger.LogWarning("    ✓ Updated cached ingredient {ItemName}", ingredientName);
+                                        }
+                                        else
+                                        {
+                                            _context.CachedItems.Add(new CachedItem
+                                            {
+                                                ItemId = ingredient.ItemId,
+                                                Name = ingredientName,
+                                                IconUrl = ingredientIconUrl,
+                                                Rarity = ingredientRarity,
+                                                RawJson = ingredientRawJson,
+                                                CachedAt = DateTime.UtcNow,
+                                                LastUpdated = DateTime.UtcNow
+                                            });
+                                            _logger.LogWarning("    ✓ Added ingredient to cache {ItemName}", ingredientName);
+                                        }
                                     }
                                     else
                                     {

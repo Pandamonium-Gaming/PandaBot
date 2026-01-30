@@ -106,25 +106,45 @@ public class AshesRecipeService
                 using var scope = _serviceProvider.CreateScope();
                 var apiService = scope.ServiceProvider.GetRequiredService<AshesForgeApiService>();
                 
-                // Fire and forget - enrich in background without blocking the interaction
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await apiService.EnrichSingleRecipeAsync(recipe);
-                        _logger.LogWarning("Background enrichment completed for {RecipeId}", recipeId);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Background enrichment failed for {RecipeId}", recipeId);
-                    }
-                });
+                // Enrich with timeout - wait up to 5 seconds for enrichment to complete
+                var enrichTask = apiService.EnrichSingleRecipeAsync(recipe);
+                var completedTask = await Task.WhenAny(enrichTask, Task.Delay(5000));
                 
-                _logger.LogWarning("Started background enrichment task for {RecipeId}", recipeId);
+                if (completedTask == enrichTask)
+                {
+                    _logger.LogWarning("Enrichment completed for {RecipeId}", recipeId);
+                    // Reload the recipe to get updated ingredients and output item
+                    var enrichedRecipe = await context.CachedCraftingRecipes
+                        .Include(r => r.Ingredients)
+                        .FirstOrDefaultAsync(r => r.RecipeId == recipeId);
+                    
+                    if (enrichedRecipe != null && enrichedRecipe.Ingredients.Any())
+                    {
+                        _logger.LogWarning("Reloaded recipe: {RecipeId} now has {Count} ingredients", recipeId, enrichedRecipe.Ingredients.Count);
+                        return enrichedRecipe;
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Enrichment timeout for {RecipeId}, using incomplete data", recipeId);
+                    // Start background enrichment to complete later
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await enrichTask;
+                            _logger.LogWarning("Background enrichment completed for {RecipeId}", recipeId);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Background enrichment failed for {RecipeId}", recipeId);
+                        }
+                    });
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to start background enrichment for {RecipeId}", recipeId);
+                _logger.LogWarning(ex, "Failed to enrich recipe {RecipeId}", recipeId);
             }
         }
         
@@ -435,111 +455,34 @@ public class AshesRecipeService
                 _logger.LogWarning("Processing ingredient: {ItemName} (ID: {ItemId}) x{Quantity}", 
                     ingredient.ItemName, string.IsNullOrEmpty(ingredient.ItemId) ? "[EMPTY]" : ingredient.ItemId, ingredient.Quantity);
 
-                // Try to find item in cache first
-                var itemInCache = await context.CachedItems.FirstOrDefaultAsync(i => i.ItemId == ingredient.ItemId);
+                // Check if there's a recipe that creates this item
+                var recipeForIngredient = await context.CachedCraftingRecipes
+                    .Include(r => r.Ingredients)
+                    .FirstOrDefaultAsync(r => r.OutputItemId == ingredient.ItemId);
                 
-                if (itemInCache != null)
+                if (recipeForIngredient != null && recipeForIngredient.Ingredients.Any())
                 {
-                    _logger.LogWarning("  ✓ Found {ItemName} in cache", ingredient.ItemName);
-                }
-                
-                System.Text.Json.JsonElement? itemDetails = null;
-                if (itemInCache?.RawJson != null)
-                {
-                    _logger.LogWarning("  Using cached RawJson for {ItemName}", ingredient.ItemName);
-                    itemDetails = System.Text.Json.JsonDocument.Parse(itemInCache.RawJson).RootElement;
-                }
-                else if (!string.IsNullOrEmpty(ingredient.ItemId))
-                {
-                    _logger.LogWarning("  Fetching {ItemName} from API (ItemId: {ItemId})", ingredient.ItemName, ingredient.ItemId);
-                    itemDetails = await apiService.FetchItemDetailsAsync(ingredient.ItemId);
-                    if (itemDetails != null)
-                    {
-                        _logger.LogWarning("  ✓ API fetch succeeded for {ItemName}", ingredient.ItemName);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("  ✗ API fetch FAILED for {ItemName}", ingredient.ItemName);
-                    }
-                }
-                else
-                {
-                    _logger.LogWarning("  ✗ No ItemId for {ItemName}, cannot fetch from API", ingredient.ItemName);
-                }
-
-                if (!itemDetails.HasValue || itemDetails.Value.ValueKind == System.Text.Json.JsonValueKind.Undefined)
-                {
-                    _logger.LogWarning("  → Treating {ItemName} as raw material (no item details)", ingredient.ItemName);
-                    // Treat as raw material if can't fetch
-                    AddRawMaterial(rawMaterials, ingredient.ItemName, ingredient.Quantity);
+                    _logger.LogWarning("  ✓ Found recipe for {ItemName} - {ProfessionName} Lvl {Level}", 
+                        ingredient.ItemName, recipeForIngredient.Profession, recipeForIngredient.ProfessionLevel);
+                    
+                    // Recurse into this recipe's ingredients, multiplying quantities by parent quantity
+                    var subIngredients = recipeForIngredient.Ingredients
+                        .Select(sub => new CachedRecipeIngredient
+                        {
+                            ItemId = sub.ItemId,
+                            ItemName = sub.ItemName,
+                            Quantity = sub.Quantity * ingredient.Quantity  // Multiply by parent quantity
+                        })
+                        .ToList();
+                    
+                    _logger.LogWarning("  Recursing into {Count} sub-ingredients for {ItemName} (quantity multiplier: {ParentQty})", 
+                        subIngredients.Count, ingredient.ItemName, ingredient.Quantity);
+                    await FetchRawMaterialsRecursiveAsync(context, subIngredients, rawMaterials, apiService, depth + 1, maxDepth);
                     continue;
                 }
 
-                _logger.LogWarning("  ✓ Fetched item details for {ItemName}", ingredient.ItemName);
-
-                // Check if this item has a recipe (can be crafted)
-                if (itemDetails.HasValue && itemDetails.Value.TryGetProperty("createdByRecipes", out var recipesProperty) && 
-                    recipesProperty.ValueKind == System.Text.Json.JsonValueKind.Array)
-                {
-                    var recipesArray = recipesProperty.EnumerateArray().ToList();
-                    _logger.LogWarning("  ✓ {ItemName} has {RecipeCount} recipe(s) in createdByRecipes array", ingredient.ItemName, recipesArray.Count);
-                    
-                    if (recipesArray.Count > 0)
-                    {
-                        var recipeData = recipesArray[0];
-                        _logger.LogWarning("    Using first recipe from createdByRecipes array");
-                        
-                        // This item has a recipe, fetch its ingredients recursively
-                        if (recipeData.TryGetProperty("inputs", out var inputsProperty) && 
-                            inputsProperty.ValueKind == System.Text.Json.JsonValueKind.Array)
-                        {
-                            _logger.LogWarning("    Found inputs array with {Count} groups", inputsProperty.GetArrayLength());
-                            var subIngredients = new List<CachedRecipeIngredient>();
-                            
-                            foreach (var inputGroup in inputsProperty.EnumerateArray())
-                            {
-                                var groupQuantity = GetJsonIntProperty(inputGroup, "quantity") ?? 1;
-                                
-                                if (inputGroup.TryGetProperty("items", out var itemsArray) && 
-                                    itemsArray.ValueKind == System.Text.Json.JsonValueKind.Array)
-                                {
-                                    foreach (var subIngredientJson in itemsArray.EnumerateArray())
-                                    {
-                                        var subIngredient = new CachedRecipeIngredient
-                                        {
-                                            ItemId = GetJsonStringProperty(subIngredientJson, "id") ?? 
-                                                    GetJsonStringProperty(subIngredientJson, "itemId") ?? string.Empty,
-                                            ItemName = GetJsonStringProperty(subIngredientJson, "name") ?? 
-                                                      GetJsonStringProperty(subIngredientJson, "itemName") ?? string.Empty,
-                                            Quantity = groupQuantity * ingredient.Quantity
-                                        };
-                                        
-                                        if (!string.IsNullOrEmpty(subIngredient.ItemId) || !string.IsNullOrEmpty(subIngredient.ItemName))
-                                        {
-                                            _logger.LogWarning("  Found sub-ingredient: {ItemName} x{Quantity}", 
-                                                subIngredient.ItemName, subIngredient.Quantity);
-                                            subIngredients.Add(subIngredient);
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (subIngredients.Count > 0)
-                            {
-                                _logger.LogWarning("Recursing into {Count} sub-ingredients", subIngredients.Count);
-                                // Recursively fetch raw materials for this item's ingredients
-                                await FetchRawMaterialsRecursiveAsync(context, subIngredients, rawMaterials, apiService, depth + 1, maxDepth);
-                                continue;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    _logger.LogWarning("  ✗ {ItemName} has no createdByRecipes or empty array", ingredient.ItemName);
-                }
-
-                // If no recipe, treat as raw material
+                _logger.LogWarning("  → {ItemName} is a raw material (no recipe found)", ingredient.ItemName);
+                // No recipe found - treat as raw material
                 AddRawMaterial(rawMaterials, ingredient.ItemName, ingredient.Quantity);
             }
             catch (Exception ex)
