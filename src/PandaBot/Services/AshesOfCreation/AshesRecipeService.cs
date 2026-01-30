@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using PandaBot.Core.Data;
 using PandaBot.Models.AshesOfCreation;
 using System.Text;
+using System.Text.Json;
 
 namespace PandaBot.Services.AshesOfCreation;
 
@@ -486,49 +487,58 @@ public class AshesRecipeService
                 {
                     _logger.LogWarning("  ↻ Not in cache, checking API for recipe for {ItemName}...", ingredient.ItemName);
                     
-                    var apiRecipe = await apiService.GetRecipeForItemAsync(ingredient.ItemId);
-                    if (apiRecipe != null)
+                    var apiJsonString = await apiService.GetRecipeForItemAsync(ingredient.ItemId);
+                    if (!string.IsNullOrEmpty(apiJsonString))
                     {
-                        _logger.LogWarning("  ✓ Found recipe for {ItemName} via API - enriching...", ingredient.ItemName);
-                        
-                        // Extract ingredients from API response
-                        var subIngredients = new List<CachedRecipeIngredient>();
-                        if (apiRecipe.ContainsKey("createdByRecipes") && apiRecipe["createdByRecipes"] is System.Text.Json.JsonElement recipes)
+                        try
                         {
-                            var recipeArray = recipes.EnumerateArray().FirstOrDefault();
-                            if (recipeArray.TryGetProperty("inputs", out var inputs))
+                            var itemJson = JsonDocument.Parse(apiJsonString).RootElement;
+                            _logger.LogWarning("  ✓ Found recipe for {ItemName} via API - enriching...", ingredient.ItemName);
+                            
+                            // Extract ingredients from API response
+                            var subIngredients = new List<CachedRecipeIngredient>();
+                            if (itemJson.TryGetProperty("createdByRecipes", out var recipes) && recipes.ValueKind == System.Text.Json.JsonValueKind.Array)
                             {
-                                foreach (var inputGroup in inputs.EnumerateArray())
+                                var recipeArray = recipes.EnumerateArray().FirstOrDefault();
+                                if (recipeArray.ValueKind != System.Text.Json.JsonValueKind.Undefined && 
+                                    recipeArray.TryGetProperty("inputs", out var inputs))
                                 {
-                                    if (inputGroup.TryGetProperty("items", out var items))
+                                    foreach (var inputGroup in inputs.EnumerateArray())
                                     {
-                                        foreach (var item in items.EnumerateArray())
+                                        if (inputGroup.TryGetProperty("items", out var items))
                                         {
-                                            var itemId = item.TryGetProperty("id", out var id) ? id.GetString() : null;
-                                            var itemName = item.TryGetProperty("name", out var name) ? name.GetString() : "Unknown";
-                                            var quantity = item.TryGetProperty("quantity", out var qty) ? qty.GetInt32() : 1;
-                                            
-                                            if (!string.IsNullOrEmpty(itemId))
+                                            foreach (var item in items.EnumerateArray())
                                             {
-                                                subIngredients.Add(new CachedRecipeIngredient
+                                                var itemId = item.TryGetProperty("id", out var id) ? id.GetString() : null;
+                                                var itemName = item.TryGetProperty("name", out var name) ? name.GetString() : "Unknown";
+                                                var quantity = item.TryGetProperty("quantity", out var qty) ? qty.GetInt32() : 1;
+                                                
+                                                if (!string.IsNullOrEmpty(itemId))
                                                 {
-                                                    ItemId = itemId,
-                                                    ItemName = itemName ?? "Unknown",
-                                                    Quantity = quantity * ingredient.Quantity
-                                                });
+                                                    subIngredients.Add(new CachedRecipeIngredient
+                                                    {
+                                                        ItemId = itemId,
+                                                        ItemName = itemName ?? "Unknown",
+                                                        Quantity = quantity * ingredient.Quantity
+                                                    });
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
+                            
+                            if (subIngredients.Any())
+                            {
+                                _logger.LogWarning("  Recursing into {Count} sub-ingredients from API for {ItemName} (quantity multiplier: {ParentQty})", 
+                                    subIngredients.Count, ingredient.ItemName, ingredient.Quantity);
+                                await FetchRawMaterialsRecursiveAsync(context, subIngredients, rawMaterials, apiService, depth + 1, maxDepth);
+                                continue;
+                            }
                         }
-                        
-                        if (subIngredients.Any())
+                        catch (Exception apiEx)
                         {
-                            _logger.LogWarning("  Recursing into {Count} sub-ingredients from API for {ItemName} (quantity multiplier: {ParentQty})", 
-                                subIngredients.Count, ingredient.ItemName, ingredient.Quantity);
-                            await FetchRawMaterialsRecursiveAsync(context, subIngredients, rawMaterials, apiService, depth + 1, maxDepth);
-                            continue;
+                            _logger.LogWarning(apiEx, "Error parsing API recipe for {ItemName}", ingredient.ItemName);
                         }
                     }
                 }

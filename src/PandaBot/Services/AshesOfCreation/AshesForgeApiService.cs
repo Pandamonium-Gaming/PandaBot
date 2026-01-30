@@ -1076,29 +1076,33 @@ public class AshesForgeApiService
 
     /// <summary>
     /// Fetches recipe data for an item from the API (what creates this item)
-    /// Returns the item details which includes createdByRecipes array
+    /// Returns the item details as raw JSON string which includes createdByRecipes array
     /// </summary>
-    public async Task<Dictionary<string, JsonElement>?> GetRecipeForItemAsync(string itemId)
+    public async Task<string?> GetRecipeForItemAsync(string itemId)
     {
         try
         {
-            var itemDetails = await FetchItemDetailsAsync(itemId);
-            if (!itemDetails.HasValue)
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            
+            var url = $"items/{itemId}";
+            _logger.LogDebug("Fetching item/recipe details from API: {Url}", url);
+            
+            var response = await _httpClient.GetAsync(url, cts.Token);
+            
+            if (!response.IsSuccessStatusCode)
             {
-                _logger.LogDebug("No item details found for {ItemId}", itemId);
+                _logger.LogDebug("Item details request failed: {StatusCode}", response.StatusCode);
                 return null;
             }
 
-            var item = itemDetails.Value;
+            var json = await response.Content.ReadAsStringAsync(cts.Token);
             
-            // Convert to Dictionary for easier access in caller
-            var result = new Dictionary<string, JsonElement>();
-            foreach (var property in item.EnumerateObject())
+            if (json == "null" || string.IsNullOrWhiteSpace(json))
             {
-                result[property.Name] = property.Value;
+                return null;
             }
             
-            return result;
+            return json;
         }
         catch (Exception ex)
         {
