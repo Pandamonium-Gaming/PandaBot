@@ -182,17 +182,15 @@ public class AshesRecipeService
 
         // Convert profession level to human-readable format
         // Try to get certificationLevel from RawJson first, fall back to ProfessionLevel
-        var professionLevelNum = recipe.ProfessionLevel;
+        var professionLevelDisplay = recipe.ProfessionLevel.ToString();
         if (!string.IsNullOrEmpty(recipe.RawJson))
         {
             try
             {
                 var certLevel = ExtractCertificationLevelFromJson(recipe.RawJson);
-                if (certLevel.HasValue)
+                if (certLevel != null)
                 {
-                    professionLevelNum = certLevel.Value;
-                    // Update the database with the correct value
-                    recipe.ProfessionLevel = professionLevelNum;
+                    professionLevelDisplay = certLevel;
                 }
             }
             catch
@@ -201,8 +199,7 @@ public class AshesRecipeService
             }
         }
         
-        var professionLevel = GetProfessionLevelName(recipe.Profession, professionLevelNum);
-        var professionInfo = $"{recipe.Profession} - {professionLevel}";
+        var professionInfo = $"{recipe.Profession} - {professionLevelDisplay}";
         embed.AddField("Crafter Level", professionInfo, inline: true);
 
         // Add station if available
@@ -367,7 +364,7 @@ public class AshesRecipeService
         }
     }
 
-    private int? ExtractCertificationLevelFromJson(string rawJson)
+    private string? ExtractCertificationLevelFromJson(string rawJson)
     {
         try
         {
@@ -380,44 +377,7 @@ public class AshesRecipeService
                 {
                     if (certLevelProp.ValueKind == JsonValueKind.String)
                     {
-                        var levelName = certLevelProp.GetString()?.ToLower() ?? "";
-                        
-                        // Parse tier (base level) and rank (I/II/III offset)
-                        var baseLevels = new Dictionary<string, int>
-                        {
-                            { "novice", 0 },
-                            { "apprentice", 1 },
-                            { "journeyman", 4 },
-                            { "artisan", 7 },
-                            { "master", 10 },
-                            { "expert", 13 },
-                            { "grandmaster", 16 }
-                        };
-                        
-                        var baseLevel = 0;
-                        foreach (var tier in baseLevels.Keys)
-                        {
-                            if (levelName.StartsWith(tier))
-                            {
-                                baseLevel = baseLevels[tier];
-                                
-                                // Check for Roman numeral suffix (I, II, III)
-                                if (levelName.Contains(" iii") || levelName.Contains(" 3"))
-                                    return baseLevel + 2;
-                                else if (levelName.Contains(" ii") || levelName.Contains(" 2"))
-                                    return baseLevel + 1;
-                                else if (levelName.Contains(" i") || levelName.Contains(" 1"))
-                                    return baseLevel; // Base level is already the "I" variant
-                                else
-                                    return baseLevel; // No suffix, return base
-                            }
-                        }
-                        
-                        return null;
-                    }
-                    else if (certLevelProp.ValueKind == JsonValueKind.Number)
-                    {
-                        return certLevelProp.GetInt32();
+                        return certLevelProp.GetString();
                     }
                 }
                 
@@ -454,30 +414,17 @@ public class AshesRecipeService
         };
     }
 
-    private string GetProfessionLevelName(string profession, int level)
+    private string GetProfessionLevelName(string profession, int skillPoints)
     {
-        return level switch
+        // Map skill point values to profession tiers (0-10, 10-20, 20-30, 30-40, 40-50)
+        return skillPoints switch
         {
-            0 => "Novice",
-            1 => "Apprentice I",
-            2 => "Apprentice II",
-            3 => "Apprentice III",
-            4 => "Journeyman I",
-            5 => "Journeyman II",
-            6 => "Journeyman III",
-            7 => "Artisan I",
-            8 => "Artisan II",
-            9 => "Artisan III",
-            10 => "Master I",
-            11 => "Master II",
-            12 => "Master III",
-            13 => "Expert I",
-            14 => "Expert II",
-            15 => "Expert III",
-            16 => "Grandmaster I",
-            17 => "Grandmaster II",
-            18 => "Grandmaster III",
-            _ => $"Level {level}"
+            >= 0 and <= 10 => "Novice",
+            > 10 and <= 20 => "Apprentice",
+            > 20 and <= 30 => "Journeyman",
+            > 30 and <= 40 => "Master",
+            > 40 and <= 50 => "Grandmaster",
+            _ => $"Level {skillPoints}"
         };
     }
 
@@ -487,18 +434,17 @@ public class AshesRecipeService
         
         var ingredients = recipe.Ingredients?.ToList() ?? new List<CachedRecipeIngredient>();
         var rawMaterials = new Dictionary<string, int>();
-        var requiredProfessions = new HashSet<string>();
+        var requiredProfessions = new Dictionary<string, string>();  // profession -> tier name
         
         // Add the main recipe's profession - extract from RawJson if available
-        var mainLevel = recipe.ProfessionLevel;
+        var mainProfessionLevel = recipe.ProfessionLevel.ToString();
         if (!string.IsNullOrEmpty(recipe.RawJson))
         {
             var certLevel = ExtractCertificationLevelFromJson(recipe.RawJson);
-            if (certLevel.HasValue)
-                mainLevel = certLevel.Value;
+            if (certLevel != null)
+                mainProfessionLevel = certLevel;
         }
-        var mainProfessionLevel = GetProfessionLevelName(recipe.Profession, mainLevel);
-        requiredProfessions.Add($"{recipe.Profession} - {mainProfessionLevel}");
+        requiredProfessions[recipe.Profession] = mainProfessionLevel;
         
         // Fetch raw materials and collect required professions
         await FetchRawMaterialsRecursiveAsync(context, ingredients, rawMaterials, apiService, depth: 0, maxDepth: 5, requiredProfessions: requiredProfessions);
@@ -573,7 +519,7 @@ public class AshesRecipeService
         PandaBotContext context, 
         List<CachedRecipeIngredient>? ingredients, 
         Dictionary<string, int> rawMaterials,
-        AshesForgeApiService apiService,
+        AshesForgeApiService? apiService,
         int depth = 0,
         int maxDepth = 5,
         HashSet<string>? requiredProfessions = null)
@@ -615,7 +561,43 @@ public class AshesRecipeService
                     // Track this profession as required
                     if (!string.IsNullOrEmpty(recipeForIngredient.Profession) && depth > 0)  // Don't track the initial recipe's profession
                     {
-                        var professionLevel = GetProfessionLevelName(recipeForIngredient.Profession, recipeForIngredient.ProfessionLevel);
+                        var professionLevel = recipeForIngredient.ProfessionLevel.ToString();
+                        
+                        // Try to extract from cached RawJson first
+                        if (!string.IsNullOrEmpty(recipeForIngredient.RawJson))
+                        {
+                            var certLevel = ExtractCertificationLevelFromJson(recipeForIngredient.RawJson);
+                            if (certLevel != null)
+                                professionLevel = certLevel;
+                        }
+                        
+                        // If still no level found and we have apiService, try fetching fresh from API
+                        if (professionLevel == recipeForIngredient.ProfessionLevel.ToString() && apiService != null && !string.IsNullOrEmpty(recipeForIngredient.RecipeId))
+                        {
+                            try
+                            {
+                                var itemIdToFetch = recipeForIngredient.OutputItemId ?? "";
+                                if (!string.IsNullOrEmpty(itemIdToFetch))
+                                {
+                                    var freshRecipeJson = await apiService.GetRecipeForItemAsync(itemIdToFetch);
+                                    if (!string.IsNullOrEmpty(freshRecipeJson))
+                                    {
+                                        using (var doc = JsonDocument.Parse(freshRecipeJson))
+                                        {
+                                            var root = doc.RootElement;
+                                            if (root.TryGetProperty("certificationLevel", out var certProp) && certProp.ValueKind == JsonValueKind.String)
+                                            {
+                                                var certStr = certProp.GetString();
+                                                if (certStr != null)
+                                                    professionLevel = certStr;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                        
                         requiredProfessions?.Add($"{recipeForIngredient.Profession} - {professionLevel}");
                     }
                     
@@ -644,7 +626,7 @@ public class AshesRecipeService
                 }
 
                 // Not in cache - try fetching from API as fallback
-                if (!string.IsNullOrEmpty(ingredient.ItemId))
+                if (!string.IsNullOrEmpty(ingredient.ItemId) && apiService != null)
                 {
                     _logger.LogWarning("  ↻ Not in cache, checking API for recipe for {ItemName}...", ingredient.ItemName);
                     
@@ -655,6 +637,20 @@ public class AshesRecipeService
                         {
                             var itemJson = JsonDocument.Parse(apiJsonString).RootElement;
                             _logger.LogWarning("  ✓ Found recipe for {ItemName} via API - enriching...", ingredient.ItemName);
+                            
+                            // Extract profession and certification level from API response
+                            var profession = "";
+                            var certificationLevel = "";
+                            if (itemJson.TryGetProperty("profession", out var profProp))
+                                profession = profProp.GetString() ?? "";
+                            if (itemJson.TryGetProperty("certificationLevel", out var certProp))
+                                certificationLevel = certProp.GetString() ?? "";
+                            
+                            // Add this profession to required professions if we have it
+                            if (!string.IsNullOrEmpty(profession) && !string.IsNullOrEmpty(certificationLevel))
+                            {
+                                requiredProfessions?.Add($"{profession} - {certificationLevel}");
+                            }
                             
                             // Extract ingredients from API response
                             var subIngredients = new List<CachedRecipeIngredient>();
