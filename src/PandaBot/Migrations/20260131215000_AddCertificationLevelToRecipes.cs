@@ -15,8 +15,7 @@ namespace PandaBot.Migrations
                 table: "CachedCraftingRecipes",
                 type: "TEXT",
                 nullable: false,
-                defaultValue: "",
-                defaultValueSql: "''");
+                defaultValue: "");
         }
 
         /// <inheritdoc />
