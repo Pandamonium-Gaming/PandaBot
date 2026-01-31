@@ -55,13 +55,7 @@ jobs:
       run: |
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
           "sudo rsync -avz --delete -e 'ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no' \
-          /tmp/publish/ ${{ env.DEPLOY_PATH }}/" &
-        rsync -avz --delete -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-          ./publish/ ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/publish/ && \
-        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-          "sudo rsync -avz --delete /tmp/publish/ ${{ env.DEPLOY_PATH }}/" && \
-        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-          "rm -rf /tmp/publish/"
+          ${{ env.DEPLOY_USER }}@localhost:./publish/ ${{ env.DEPLOY_PATH }}/"
     
     - name: Set permissions
       run: |
