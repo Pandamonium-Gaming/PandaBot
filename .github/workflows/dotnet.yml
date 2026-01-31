@@ -107,8 +107,9 @@ jobs:
           "PANDABOT_ConnectionStrings__DefaultConnection=Data Source=${{ env.DEPLOY_PATH }}/pandabot.db" \
           "PANDABOT_AshesForge__CacheExpirationHours=24" \
           "PANDABOT_AshesForge__EnableImageCaching=true" > /tmp/pandabot.env
-        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no /tmp/pandabot.env ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/.env
-        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "chmod 600 ${{ env.DEPLOY_PATH }}/.env"
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no /tmp/pandabot.env ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/pandabot.env
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo mv /tmp/pandabot.env ${{ env.DEPLOY_PATH }}/.env && sudo chmod 600 ${{ env.DEPLOY_PATH }}/.env"
         rm /tmp/pandabot.env
 
     - name: Start bot service
