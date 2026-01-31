@@ -1,9 +1,11 @@
 using DiscordBot.Extensions;
 using DiscordBot.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using PandaBot.Core.Data;
 using Serilog;
 
 // Create logs directory
@@ -39,6 +41,13 @@ try
                     logging.AddSerilog();
                 })
                 .Build();
+
+    // Run database migrations
+    using (var scope = host.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<PandaBotContext>();
+        await db.Database.MigrateAsync();
+    }
 
     var botService = host.Services.GetRequiredService<DiscordBotService>();
 
