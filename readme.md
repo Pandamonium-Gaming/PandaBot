@@ -1,5 +1,7 @@
 # PandaBot
 
+[![Build and Deploy](https://github.com/Pandamonium-Gaming/PandaBot/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Pandamonium-Gaming/PandaBot/actions/workflows/dotnet.yml)
+
 A Discord bot for the Ashes of Creation community.
 
 ## Configuration
