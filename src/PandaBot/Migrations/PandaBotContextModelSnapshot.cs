@@ -31,7 +31,7 @@ namespace PandaBot.Migrations
 
                     b.HasKey("GuildId");
 
-                    b.ToTable("GuildSettings");
+                    b.ToTable("GuildSettings", (string)null);
                 });
 
             modelBuilder.Entity("PandaBot.Models.AshesOfCreation.CachedCraftingRecipe", b =>
@@ -44,6 +44,10 @@ namespace PandaBot.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("CertificationLevel")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("CraftTime")
                         .HasColumnType("INTEGER");
@@ -102,7 +106,7 @@ namespace PandaBot.Migrations
                     b.HasIndex("RecipeId")
                         .IsUnique();
 
-                    b.ToTable("CachedCraftingRecipes");
+                    b.ToTable("CachedCraftingRecipes", (string)null);
                 });
 
             modelBuilder.Entity("PandaBot.Models.AshesOfCreation.CachedItem", b =>
@@ -116,6 +120,9 @@ namespace PandaBot.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<int?>("CachedItemId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Category")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -124,9 +131,6 @@ namespace PandaBot.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("Enchantable")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("IconUrl")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -134,9 +138,6 @@ namespace PandaBot.Migrations
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsStackable")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ItemId")
                         .IsRequired()
@@ -147,10 +148,6 @@ namespace PandaBot.Migrations
 
                     b.Property<int?>("Level")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("LocalIconPath")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("LocalImagePath")
                         .IsRequired()
@@ -195,13 +192,7 @@ namespace PandaBot.Migrations
                     b.HasIndex("ItemId")
                         .IsUnique();
 
-                    b.HasIndex("Name");
-
-                    b.HasIndex("Rarity");
-
-                    b.HasIndex("Type");
-
-                    b.ToTable("CachedItems");
+                    b.ToTable("CachedItems", (string)null);
                 });
 
             modelBuilder.Entity("PandaBot.Models.AshesOfCreation.CachedMob", b =>
@@ -215,33 +206,19 @@ namespace PandaBot.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<string>("Category")
+                    b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ImageUrl")
+                    b.Property<string>("IconUrl")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsBoss")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsElite")
-                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("LastUpdated")
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("Level")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("LocalImagePath")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Location")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("MobId")
                         .IsRequired()
@@ -255,18 +232,12 @@ namespace PandaBot.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.HasKey("Id");
 
                     b.HasIndex("MobId")
                         .IsUnique();
 
-                    b.HasIndex("Name");
-
-                    b.ToTable("CachedMobs");
+                    b.ToTable("CachedMobs", (string)null);
                 });
 
             modelBuilder.Entity("PandaBot.Models.AshesOfCreation.CachedRecipeIngredient", b =>
@@ -275,7 +246,7 @@ namespace PandaBot.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("CachedCraftingRecipeId")
+                    b.Property<int?>("CachedRecipeId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("ItemId")
@@ -291,11 +262,9 @@ namespace PandaBot.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CachedCraftingRecipeId");
+                    b.HasIndex("CachedRecipeId");
 
-                    b.HasIndex("ItemId");
-
-                    b.ToTable("CachedRecipeIngredients");
+                    b.ToTable("CachedRecipeIngredients", (string)null);
                 });
 
             modelBuilder.Entity("PandaBot.Models.AshesOfCreation.CachedVendor", b =>
@@ -309,15 +278,11 @@ namespace PandaBot.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.Property<string>("ImageUrl")
+                    b.Property<string>("IconUrl")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("LastUpdated")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("LocalImagePath")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Location")
@@ -346,12 +311,10 @@ namespace PandaBot.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name");
-
                     b.HasIndex("VendorId")
                         .IsUnique();
 
-                    b.ToTable("CachedVendors");
+                    b.ToTable("CachedVendors", (string)null);
                 });
 
             modelBuilder.Entity("PandaBot.Models.AshesOfCreation.MobItemDrop", b =>
@@ -360,29 +323,19 @@ namespace PandaBot.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("CachedItemId")
+                    b.Property<int?>("CachedItemId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("CachedMobId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal?>("DropRate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("MaxQuantity")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("MinQuantity")
+                    b.Property<int?>("CachedMobId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CachedItemId");
 
-                    b.HasIndex("CachedMobId", "CachedItemId")
-                        .IsUnique();
+                    b.HasIndex("CachedMobId");
 
-                    b.ToTable("MobItemDrops");
+                    b.ToTable("MobItemDrops", (string)null);
                 });
 
             modelBuilder.Entity("PandaBot.Models.AshesOfCreation.MobRecipeDrop", b =>
@@ -391,101 +344,62 @@ namespace PandaBot.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("CachedCraftingRecipeId")
+                    b.Property<int?>("CachedMobId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("CachedMobId")
+                    b.Property<int?>("CachedRecipeId")
                         .HasColumnType("INTEGER");
-
-                    b.Property<decimal?>("DropRate")
-                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CachedCraftingRecipeId");
+                    b.HasIndex("CachedMobId");
 
-                    b.HasIndex("CachedMobId", "CachedCraftingRecipeId")
-                        .IsUnique();
+                    b.HasIndex("CachedRecipeId");
 
-                    b.ToTable("MobRecipeDrops");
+                    b.ToTable("MobRecipeDrops", (string)null);
                 });
 
-            modelBuilder.Entity("PandaBot.Models.AshesOfCreation.CachedCraftingRecipe", b =>
+            modelBuilder.Entity("PandaBot.Models.AshesOfCreation.CachedItem", b =>
                 {
-                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedItem", "OutputItem")
+                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedItem", null)
                         .WithMany()
-                        .HasForeignKey("OutputItemCachedId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("OutputItem");
+                        .HasForeignKey("CachedItemId");
                 });
 
             modelBuilder.Entity("PandaBot.Models.AshesOfCreation.CachedRecipeIngredient", b =>
                 {
-                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedCraftingRecipe", "CachedCraftingRecipe")
+                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedCraftingRecipe", "CachedRecipe")
                         .WithMany("Ingredients")
-                        .HasForeignKey("CachedCraftingRecipeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CachedRecipeId");
 
-                    b.Navigation("CachedCraftingRecipe");
+                    b.Navigation("CachedRecipe");
                 });
 
             modelBuilder.Entity("PandaBot.Models.AshesOfCreation.MobItemDrop", b =>
                 {
-                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedItem", "CachedItem")
-                        .WithMany("MobDrops")
-                        .HasForeignKey("CachedItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedItem", null)
+                        .WithMany()
+                        .HasForeignKey("CachedItemId");
 
-                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedMob", "CachedMob")
-                        .WithMany("ItemDrops")
-                        .HasForeignKey("CachedMobId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CachedItem");
-
-                    b.Navigation("CachedMob");
+                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedMob", null)
+                        .WithMany()
+                        .HasForeignKey("CachedMobId");
                 });
 
             modelBuilder.Entity("PandaBot.Models.AshesOfCreation.MobRecipeDrop", b =>
                 {
-                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedCraftingRecipe", "CachedCraftingRecipe")
-                        .WithMany("MobDrops")
-                        .HasForeignKey("CachedCraftingRecipeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedMob", null)
+                        .WithMany()
+                        .HasForeignKey("CachedMobId");
 
-                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedMob", "CachedMob")
-                        .WithMany("RecipeDrops")
-                        .HasForeignKey("CachedMobId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CachedCraftingRecipe");
-
-                    b.Navigation("CachedMob");
+                    b.HasOne("PandaBot.Models.AshesOfCreation.CachedCraftingRecipe", null)
+                        .WithMany()
+                        .HasForeignKey("CachedRecipeId");
                 });
 
             modelBuilder.Entity("PandaBot.Models.AshesOfCreation.CachedCraftingRecipe", b =>
                 {
                     b.Navigation("Ingredients");
-
-                    b.Navigation("MobDrops");
-                });
-
-            modelBuilder.Entity("PandaBot.Models.AshesOfCreation.CachedItem", b =>
-                {
-                    b.Navigation("MobDrops");
-                });
-
-            modelBuilder.Entity("PandaBot.Models.AshesOfCreation.CachedMob", b =>
-                {
-                    b.Navigation("ItemDrops");
-
-                    b.Navigation("RecipeDrops");
                 });
 #pragma warning restore 612, 618
         }
