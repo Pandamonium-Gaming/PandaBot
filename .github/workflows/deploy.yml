@@ -12,7 +12,7 @@ env:
   DEPLOY_USER: 'deployment'
   DEPLOY_PATH: '/opt/pandabot'
 
-# Required secrets: DEPLOY_SSH_KEY, DEPLOY_HOST
+# Required secrets: DEPLOY_SSH_KEY, DEPLOY_HOST, DISCORD_TOKEN
 
 jobs:
   deploy:
@@ -61,6 +61,19 @@ jobs:
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
           "sudo chown -R ${{ env.DEPLOY_USER }}:${{ env.DEPLOY_USER }} ${{ env.DEPLOY_PATH }} && \
            chmod +x ${{ env.DEPLOY_PATH }}/PandaBot"
+    
+    - name: Create/Update .env file
+      run: |
+        cat > /tmp/pandabot.env << EOF
+PANDABOT_Discord__Token=${{ secrets.DISCORD_TOKEN }}
+PANDABOT_Discord__Prefix=!
+PANDABOT_ConnectionStrings__DefaultConnection=Data Source=${{ env.DEPLOY_PATH }}/pandabot.db
+PANDABOT_AshesForge__CacheExpirationHours=24
+PANDABOT_AshesForge__EnableImageCaching=true
+EOF
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no /tmp/pandabot.env ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/.env
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "chmod 600 ${{ env.DEPLOY_PATH }}/.env"
+        rm /tmp/pandabot.env
     
     - name: Start bot service
       run: |

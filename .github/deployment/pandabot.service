@@ -1,0 +1,24 @@
+[Unit]
+Description=PandaBot Discord Bot Service
+After=network.target
+
+[Service]
+Type=simple
+User=deployment
+WorkingDirectory=/opt/pandabot
+ExecStart=/opt/pandabot/PandaBot
+EnvironmentFile=/opt/pandabot/.env
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pandabot
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/pandabot
+
+[Install]
+WantedBy=multi-user.target
