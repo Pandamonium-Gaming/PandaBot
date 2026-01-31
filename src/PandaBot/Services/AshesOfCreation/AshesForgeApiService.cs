@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using PandaBot.Core.Data;
 using PandaBot.Models.AshesOfCreation;
+using PandaBot.Utils;
 
 namespace PandaBot.Services.AshesOfCreation;
 
@@ -492,10 +493,10 @@ public class AshesForgeApiService
             var item = itemDetails.Value;
             
             // Save the output item with its stats to cache
-            var itemId = GetStringProperty(item, "id") ?? recipe.OutputItemId;
-            var itemName = GetStringProperty(item, "name") ?? recipe.OutputItemName;
-            var iconUrl = GetStringProperty(item, "icon") ?? string.Empty;
-            var rarity = GetStringProperty(item, "rarity") ?? string.Empty;
+            var itemId = JsonHelper.GetStringProperty(item, "id") ?? recipe.OutputItemId;
+            var itemName = JsonHelper.GetStringProperty(item, "name") ?? recipe.OutputItemName;
+            var iconUrl = JsonHelper.GetStringProperty(item, "icon") ?? string.Empty;
+            var rarity = JsonHelper.GetStringProperty(item, "rarity") ?? string.Empty;
             var rawJson = item.GetRawText();
             
             _logger.LogWarning("Caching output item {ItemName} with stats", itemName);
@@ -548,13 +549,13 @@ public class AshesForgeApiService
                         if (profProperty.ValueKind == JsonValueKind.String)
                             apiProfessionName = profProperty.GetString() ?? string.Empty;
                         else if (profProperty.ValueKind == JsonValueKind.Object)
-                            apiProfessionName = GetStringProperty(profProperty, "name") ?? string.Empty;
+                            apiProfessionName = JsonHelper.GetStringProperty(profProperty, "name") ?? string.Empty;
                         
                         var apiLevelName = string.Empty;
                         if (levelProperty.ValueKind == JsonValueKind.String)
                             apiLevelName = levelProperty.GetString() ?? string.Empty;
                         else if (levelProperty.ValueKind == JsonValueKind.Object)
-                            apiLevelName = GetStringProperty(levelProperty, "name") ?? string.Empty;
+                            apiLevelName = JsonHelper.GetStringProperty(levelProperty, "name") ?? string.Empty;
                         
                         if (!string.IsNullOrEmpty(apiProfessionName) && !string.IsNullOrEmpty(apiLevelName))
                         {
@@ -563,7 +564,7 @@ public class AshesForgeApiService
                             int ingredientCount = 0;
                             foreach (var inputGroup in inputsProperty.EnumerateArray())
                             {
-                                var groupQuantity = GetIntProperty(inputGroup, "quantity") ?? 1;
+                                var groupQuantity = JsonHelper.GetIntProperty(inputGroup, "quantity") ?? 1;
                                 
                                 if (inputGroup.TryGetProperty("items", out var itemsArray) && 
                                     itemsArray.ValueKind == JsonValueKind.Array)
@@ -573,10 +574,10 @@ public class AshesForgeApiService
                                         var ingredient = new CachedRecipeIngredient
                                         {
                                             CachedCraftingRecipeId = recipe.Id,
-                                            ItemId = GetStringProperty(ingredientJson, "id") ?? 
-                                                    GetStringProperty(ingredientJson, "itemId") ?? string.Empty,
-                                            ItemName = GetStringProperty(ingredientJson, "name") ?? 
-                                                      GetStringProperty(ingredientJson, "itemName") ?? string.Empty,
+                                            ItemId = JsonHelper.GetStringProperty(ingredientJson, "id") ?? 
+                                                    JsonHelper.GetStringProperty(ingredientJson, "itemId") ?? string.Empty,
+                                            ItemName = JsonHelper.GetStringProperty(ingredientJson, "name") ?? 
+                                                      JsonHelper.GetStringProperty(ingredientJson, "itemName") ?? string.Empty,
                                             Quantity = groupQuantity
                                         };
                                         
@@ -612,9 +613,9 @@ public class AshesForgeApiService
                                     if (ingredientDetails.HasValue)
                                     {
                                         var ingredientItem = ingredientDetails.Value;
-                                        var ingredientName = GetStringProperty(ingredientItem, "name") ?? ingredient.ItemName;
-                                        var ingredientIconUrl = GetStringProperty(ingredientItem, "icon") ?? string.Empty;
-                                        var ingredientRarity = GetStringProperty(ingredientItem, "rarity") ?? string.Empty;
+                                        var ingredientName = JsonHelper.GetStringProperty(ingredientItem, "name") ?? ingredient.ItemName;
+                                        var ingredientIconUrl = JsonHelper.GetStringProperty(ingredientItem, "icon") ?? string.Empty;
+                                        var ingredientRarity = JsonHelper.GetStringProperty(ingredientItem, "rarity") ?? string.Empty;
                                         var ingredientRawJson = ingredientItem.GetRawText();
                                         
                                         // Check if already exists and update, or add new
@@ -745,7 +746,7 @@ public class AshesForgeApiService
                             }
                             else if (profProperty.ValueKind == JsonValueKind.Object)
                             {
-                                apiProfessionName = GetStringProperty(profProperty, "name") ?? string.Empty;
+                                apiProfessionName = JsonHelper.GetStringProperty(profProperty, "name") ?? string.Empty;
                             }
                             
                             // Extract level name - could be a string or an object with .name
@@ -756,7 +757,7 @@ public class AshesForgeApiService
                             }
                             else if (levelProperty.ValueKind == JsonValueKind.Object)
                             {
-                                apiLevelName = GetStringProperty(levelProperty, "name") ?? string.Empty;
+                                apiLevelName = JsonHelper.GetStringProperty(levelProperty, "name") ?? string.Empty;
                             }
                             
                             _logger.LogWarning("Found recipe data for {RecipeName} - Profession: {Profession}, Level: {Level}", 
@@ -767,7 +768,7 @@ public class AshesForgeApiService
                             foreach (var inputGroup in inputsProperty.EnumerateArray())
                             {
                                 // Get quantity from the input group level
-                                var groupQuantity = GetIntProperty(inputGroup, "quantity") ?? 1;
+                                var groupQuantity = JsonHelper.GetIntProperty(inputGroup, "quantity") ?? 1;
                                 
                                 // Each input group has an "items" array
                                 if (inputGroup.TryGetProperty("items", out var itemsArray) && 
@@ -778,10 +779,10 @@ public class AshesForgeApiService
                                         var ingredient = new CachedRecipeIngredient
                                         {
                                             CachedCraftingRecipeId = recipe.Id,
-                                            ItemId = GetStringProperty(ingredientJson, "id") ?? 
-                                                    GetStringProperty(ingredientJson, "itemId") ?? string.Empty,
-                                            ItemName = GetStringProperty(ingredientJson, "name") ?? 
-                                                      GetStringProperty(ingredientJson, "itemName") ?? string.Empty,
+                                            ItemId = JsonHelper.GetStringProperty(ingredientJson, "id") ?? 
+                                                    JsonHelper.GetStringProperty(ingredientJson, "itemId") ?? string.Empty,
+                                            ItemName = JsonHelper.GetStringProperty(ingredientJson, "name") ?? 
+                                                      JsonHelper.GetStringProperty(ingredientJson, "itemName") ?? string.Empty,
                                             Quantity = groupQuantity
                                         };
                                         
@@ -844,21 +845,21 @@ public class AshesForgeApiService
 
         return new CachedItem
         {
-            ItemId = GetStringProperty(itemJson, "id") ?? Guid.NewGuid().ToString(),
-            Name = GetStringProperty(itemJson, "name") ?? "Unknown",
-            Description = GetStringProperty(itemJson, "description") ?? string.Empty,
+            ItemId = JsonHelper.GetStringProperty(itemJson, "id") ?? Guid.NewGuid().ToString(),
+            Name = JsonHelper.GetStringProperty(itemJson, "name") ?? "Unknown",
+            Description = JsonHelper.GetStringProperty(itemJson, "description") ?? string.Empty,
             Type = ExtractTypeFromTags(tags),
             Category = ExtractCategoryFromTags(tags),
-            Rarity = GetStringProperty(itemJson, "rarity") ?? "Common",
-            Level = GetIntProperty(itemJson, "level"),
-            IconUrl = GetStringProperty(itemJson, "icon") ?? string.Empty,
-            ImageUrl = GetStringProperty(itemJson, "image") ?? string.Empty,
-            IsStackable = GetBoolProperty(itemJson, "stackable"),
-            MaxStackSize = GetIntProperty(itemJson, "maxStack"),
-            SlotType = GetStringProperty(itemJson, "slot") ?? string.Empty,
-            Enchantable = GetBoolProperty(itemJson, "enchantable"),
-            VendorValueType = GetStringProperty(itemJson, "vendorValueType") ?? string.Empty,
-            Views = GetIntProperty(itemJson, "views") ?? 0,
+            Rarity = JsonHelper.GetStringProperty(itemJson, "rarity") ?? "Common",
+            Level = JsonHelper.GetIntProperty(itemJson, "level"),
+            IconUrl = JsonHelper.GetStringProperty(itemJson, "icon") ?? string.Empty,
+            ImageUrl = JsonHelper.GetStringProperty(itemJson, "image") ?? string.Empty,
+            IsStackable = JsonHelper.GetBoolProperty(itemJson, "stackable"),
+            MaxStackSize = JsonHelper.GetIntProperty(itemJson, "maxStack"),
+            SlotType = JsonHelper.GetStringProperty(itemJson, "slot") ?? string.Empty,
+            Enchantable = JsonHelper.GetBoolProperty(itemJson, "enchantable"),
+            VendorValueType = JsonHelper.GetStringProperty(itemJson, "vendorValueType") ?? string.Empty,
+            Views = JsonHelper.GetIntProperty(itemJson, "views") ?? 0,
             Tags = tags,
             RawJson = rawJson,
             CachedAt = DateTime.UtcNow,
@@ -916,27 +917,6 @@ public class AshesForgeApiService
         }
     }
 
-    private string? GetStringProperty(JsonElement element, string propertyName)
-    {
-        if (element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String)
-            return property.GetString();
-        return null;
-    }
-
-    private int? GetIntProperty(JsonElement element, string propertyName)
-    {
-        if (element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.Number)
-            return property.GetInt32();
-        return null;
-    }
-
-    private bool GetBoolProperty(JsonElement element, string propertyName)
-    {
-        if (element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.True)
-            return true;
-        return false;
-    }
-
     private int GetProfessionLevelFromName(string levelName)
     {
         return levelName switch
@@ -984,17 +964,17 @@ public class AshesForgeApiService
                 
                 foreach (var ingredientJson in ingredientsProperty.EnumerateArray())
                 {
-                    var itemId = GetStringProperty(ingredientJson, "id") ?? 
-                                 GetStringProperty(ingredientJson, "itemId") ?? 
+                    var itemId = JsonHelper.GetStringProperty(ingredientJson, "id") ?? 
+                                 JsonHelper.GetStringProperty(ingredientJson, "itemId") ?? 
                                  string.Empty;
                     
-                    var itemName = GetStringProperty(ingredientJson, "name") ?? 
-                                   GetStringProperty(ingredientJson, "itemName") ?? 
+                    var itemName = JsonHelper.GetStringProperty(ingredientJson, "name") ?? 
+                                   JsonHelper.GetStringProperty(ingredientJson, "itemName") ?? 
                                    string.Empty;
                     
-                    var quantity = GetIntProperty(ingredientJson, "quantity") ?? 
-                                   GetIntProperty(ingredientJson, "amount") ?? 
-                                   GetIntProperty(ingredientJson, "count") ?? 
+                    var quantity = JsonHelper.GetIntProperty(ingredientJson, "quantity") ?? 
+                                   JsonHelper.GetIntProperty(ingredientJson, "amount") ?? 
+                                   JsonHelper.GetIntProperty(ingredientJson, "count") ?? 
                                    1;
                     
                     if (!string.IsNullOrEmpty(itemId) || !string.IsNullOrEmpty(itemName))
@@ -1021,26 +1001,27 @@ public class AshesForgeApiService
             var firstOutput = outputsProperty.EnumerateArray().FirstOrDefault();
             if (firstOutput.ValueKind != JsonValueKind.Undefined)
             {
-                outputItemId = GetStringProperty(firstOutput, "id") ?? string.Empty;
-                outputItemName = GetStringProperty(firstOutput, "name") ?? string.Empty;
+                outputItemId = JsonHelper.GetStringProperty(firstOutput, "id") ?? string.Empty;
+                outputItemName = JsonHelper.GetStringProperty(firstOutput, "name") ?? string.Empty;
             }
         }
 
         var recipe = new CachedCraftingRecipe
         {
-            RecipeId = GetStringProperty(recipeJson, "id") ?? Guid.NewGuid().ToString(),
-            Name = GetStringProperty(recipeJson, "name") ?? "Unknown Recipe",
-            Profession = GetStringProperty(recipeJson, "profession") ?? string.Empty,
-            ProfessionLevel = GetIntProperty(recipeJson, "professionLevel") ?? 
-                             GetIntProperty(recipeJson, "certificationLevel") ?? 
-                             GetIntProperty(recipeJson, "level") ?? 0,
+            RecipeId = JsonHelper.GetStringProperty(recipeJson, "id") ?? Guid.NewGuid().ToString(),
+            Name = JsonHelper.GetStringProperty(recipeJson, "name") ?? "Unknown Recipe",
+            Profession = JsonHelper.GetStringProperty(recipeJson, "profession") ?? string.Empty,
+            ProfessionLevel = JsonHelper.GetIntProperty(recipeJson, "professionLevel") ?? 
+                             JsonHelper.GetIntProperty(recipeJson, "certificationLevel") ?? 
+                             JsonHelper.GetIntProperty(recipeJson, "level") ?? 0,
+            CertificationLevel = JsonHelper.GetStringProperty(recipeJson, "certificationLevel") ?? string.Empty,
             OutputItemId = outputItemId,
             OutputItemName = outputItemName,
-            OutputQuantity = GetIntProperty(recipeJson, "outputQuantity") ?? 
-                            GetIntProperty(recipeJson, "quantity") ?? 1,
-            Station = GetStringProperty(recipeJson, "station") ?? string.Empty,
-            CraftTime = GetIntProperty(recipeJson, "craftTime") ?? 0,
-            Views = GetIntProperty(recipeJson, "views") ?? 0,
+            OutputQuantity = JsonHelper.GetIntProperty(recipeJson, "outputQuantity") ?? 
+                            JsonHelper.GetIntProperty(recipeJson, "quantity") ?? 1,
+            Station = JsonHelper.GetStringProperty(recipeJson, "station") ?? string.Empty,
+            CraftTime = JsonHelper.GetIntProperty(recipeJson, "craftTime") ?? 0,
+            Views = JsonHelper.GetIntProperty(recipeJson, "views") ?? 0,
             RawJson = rawJson,
             CachedAt = DateTime.UtcNow,
             LastUpdated = DateTime.UtcNow,
@@ -1059,15 +1040,15 @@ public class AshesForgeApiService
     {
         return new CachedMob
         {
-            MobId = GetStringProperty(mobJson, "id") ?? Guid.NewGuid().ToString(),
-            Name = GetStringProperty(mobJson, "name") ?? "Unknown Mob",
-            Type = GetStringProperty(mobJson, "type") ?? string.Empty,
-            Category = GetStringProperty(mobJson, "category") ?? string.Empty,
-            Level = GetIntProperty(mobJson, "level"),
-            Location = GetStringProperty(mobJson, "location") ?? string.Empty,
-            ImageUrl = GetStringProperty(mobJson, "image") ?? GetStringProperty(mobJson, "icon") ?? string.Empty,
-            IsBoss = GetBoolProperty(mobJson, "isBoss") || GetBoolProperty(mobJson, "boss"),
-            IsElite = GetBoolProperty(mobJson, "isElite") || GetBoolProperty(mobJson, "elite"),
+            MobId = JsonHelper.GetStringProperty(mobJson, "id") ?? Guid.NewGuid().ToString(),
+            Name = JsonHelper.GetStringProperty(mobJson, "name") ?? "Unknown Mob",
+            Type = JsonHelper.GetStringProperty(mobJson, "type") ?? string.Empty,
+            Category = JsonHelper.GetStringProperty(mobJson, "category") ?? string.Empty,
+            Level = JsonHelper.GetIntProperty(mobJson, "level"),
+            Location = JsonHelper.GetStringProperty(mobJson, "location") ?? string.Empty,
+            ImageUrl = JsonHelper.GetStringProperty(mobJson, "image") ?? JsonHelper.GetStringProperty(mobJson, "icon") ?? string.Empty,
+            IsBoss = JsonHelper.GetBoolProperty(mobJson, "isBoss") || JsonHelper.GetBoolProperty(mobJson, "boss"),
+            IsElite = JsonHelper.GetBoolProperty(mobJson, "isElite") || JsonHelper.GetBoolProperty(mobJson, "elite"),
             RawJson = rawJson,
             CachedAt = DateTime.UtcNow,
             LastUpdated = DateTime.UtcNow
@@ -1107,3 +1088,4 @@ public class AshesForgeApiService
         }
     }
 }
+

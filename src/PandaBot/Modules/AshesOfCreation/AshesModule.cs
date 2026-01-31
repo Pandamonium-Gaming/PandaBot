@@ -390,7 +390,10 @@ public class AshesModule : InteractionModuleBase<SocketInteractionContext>
             {
                 var recipe = results[i];
                 var label = recipe.Name.Length > 100 ? recipe.Name[..97] + "..." : recipe.Name;
-                var description = $"{recipe.Profession} Lvl {recipe.ProfessionLevel} → {recipe.OutputItemName}";
+                var certLevel = !string.IsNullOrEmpty(recipe.CertificationLevel) 
+                    ? recipe.CertificationLevel 
+                    : $"Level {recipe.ProfessionLevel}";
+                var description = $"{recipe.Profession} - {certLevel} → {recipe.OutputItemName}";
                 if (description.Length > 100)
                     description = description[..97] + "...";
                 

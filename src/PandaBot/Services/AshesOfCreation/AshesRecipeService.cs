@@ -5,7 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PandaBot.Core.Data;
 using PandaBot.Models.AshesOfCreation;
+using PandaBot.Utils;
 using System.Text;
+using System.Text.Json;
 
 namespace PandaBot.Services.AshesOfCreation;
 
@@ -179,9 +181,11 @@ public class AshesRecipeService
             embed.WithThumbnailUrl(iconUrl);
         }
 
-        // Convert profession level to human-readable format
-        var professionLevel = GetProfessionLevelName(recipe.Profession, recipe.ProfessionLevel);
-        var professionInfo = $"{recipe.Profession} - {professionLevel}";
+        // Add profession and certification level
+        var certificationLevel = !string.IsNullOrEmpty(recipe.CertificationLevel) 
+            ? recipe.CertificationLevel 
+            : $"Level {recipe.ProfessionLevel}";
+        var professionInfo = $"{recipe.Profession} - {certificationLevel}";
         embed.AddField("Crafter Level", professionInfo, inline: true);
 
         // Add station if available
@@ -338,32 +342,6 @@ public class AshesRecipeService
             "legendary" => Color.Gold,
             "mythic" => Color.Orange,
             _ => Color.Gold // Default colour
-        };
-    }
-
-    private string GetProfessionLevelName(string profession, int level)
-    {
-        return level switch
-        {
-            1 => "Apprentice I",
-            2 => "Apprentice II",
-            3 => "Apprentice III",
-            4 => "Journeyman I",
-            5 => "Journeyman II",
-            6 => "Journeyman III",
-            7 => "Artisan I",
-            8 => "Artisan II",
-            9 => "Artisan III",
-            10 => "Master I",
-            11 => "Master II",
-            12 => "Master III",
-            13 => "Expert I",
-            14 => "Expert II",
-            15 => "Expert III",
-            16 => "Grandmaster I",
-            17 => "Grandmaster II",
-            18 => "Grandmaster III",
-            _ => $"Level {level}"
         };
     }
 
@@ -554,19 +532,5 @@ public class AshesRecipeService
             rawMaterials[itemName] += quantity;
         else
             rawMaterials[itemName] = quantity;
-    }
-
-    private string? GetJsonStringProperty(System.Text.Json.JsonElement element, string propertyName)
-    {
-        if (element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.String)
-            return prop.GetString();
-        return null;
-    }
-
-    private int? GetJsonIntProperty(System.Text.Json.JsonElement element, string propertyName)
-    {
-        if (element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.Number)
-            return prop.GetInt32();
-        return null;
     }
 }
