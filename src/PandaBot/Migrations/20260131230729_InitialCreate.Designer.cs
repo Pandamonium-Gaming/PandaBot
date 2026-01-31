@@ -11,8 +11,8 @@ using PandaBot.Core.Data;
 namespace PandaBot.Migrations
 {
     [DbContext(typeof(PandaBotContext))]
-    [Migration("20260120150822_AddItemEnhancedFields")]
-    partial class AddItemEnhancedFields
+    [Migration("20260131230729_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -47,6 +47,10 @@ namespace PandaBot.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("CertificationLevel")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("CraftTime")
                         .HasColumnType("INTEGER");
@@ -90,6 +94,9 @@ namespace PandaBot.Migrations
                     b.Property<string>("Station")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Views")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

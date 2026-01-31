@@ -6,17 +6,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace PandaBot.Migrations
 {
     /// <inheritdoc />
-    public partial class AddImageCachingAndRelationships : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "CachedNewsArticles");
-
-            migrationBuilder.DropTable(
-                name: "CachedWikiPages");
-
             migrationBuilder.CreateTable(
                 name: "CachedItems",
                 columns: table => new
@@ -37,6 +31,10 @@ namespace PandaBot.Migrations
                     IsStackable = table.Column<bool>(type: "INTEGER", nullable: false),
                     MaxStackSize = table.Column<int>(type: "INTEGER", nullable: true),
                     SlotType = table.Column<string>(type: "TEXT", nullable: false),
+                    Enchantable = table.Column<bool>(type: "INTEGER", nullable: false),
+                    VendorValueType = table.Column<string>(type: "TEXT", nullable: false),
+                    Views = table.Column<int>(type: "INTEGER", nullable: false),
+                    Tags = table.Column<string>(type: "TEXT", nullable: false),
                     RawJson = table.Column<string>(type: "TEXT", nullable: false),
                     CachedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false)
@@ -94,6 +92,20 @@ namespace PandaBot.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "GuildSettings",
+                columns: table => new
+                {
+                    GuildId = table.Column<ulong>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    NewsChannelId = table.Column<ulong>(type: "INTEGER", nullable: true),
+                    LastNewsCheck = table.Column<DateTime>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GuildSettings", x => x.GuildId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "CachedCraftingRecipes",
                 columns: table => new
                 {
@@ -103,12 +115,14 @@ namespace PandaBot.Migrations
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Profession = table.Column<string>(type: "TEXT", nullable: false),
                     ProfessionLevel = table.Column<int>(type: "INTEGER", nullable: false),
+                    CertificationLevel = table.Column<string>(type: "TEXT", nullable: false),
                     OutputItemCachedId = table.Column<int>(type: "INTEGER", nullable: true),
                     OutputItemId = table.Column<string>(type: "TEXT", nullable: false),
                     OutputItemName = table.Column<string>(type: "TEXT", nullable: false),
                     OutputQuantity = table.Column<int>(type: "INTEGER", nullable: false),
                     Station = table.Column<string>(type: "TEXT", nullable: false),
                     CraftTime = table.Column<int>(type: "INTEGER", nullable: false),
+                    Views = table.Column<int>(type: "INTEGER", nullable: false),
                     RawJson = table.Column<string>(type: "TEXT", nullable: false),
                     CachedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false)
@@ -235,6 +249,16 @@ namespace PandaBot.Migrations
                 column: "Name");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CachedItems_Rarity",
+                table: "CachedItems",
+                column: "Rarity");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CachedItems_Type",
+                table: "CachedItems",
+                column: "Type");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CachedMobs_MobId",
                 table: "CachedMobs",
                 column: "MobId",
@@ -299,6 +323,9 @@ namespace PandaBot.Migrations
                 name: "CachedVendors");
 
             migrationBuilder.DropTable(
+                name: "GuildSettings");
+
+            migrationBuilder.DropTable(
                 name: "MobItemDrops");
 
             migrationBuilder.DropTable(
@@ -312,52 +339,6 @@ namespace PandaBot.Migrations
 
             migrationBuilder.DropTable(
                 name: "CachedItems");
-
-            migrationBuilder.CreateTable(
-                name: "CachedNewsArticles",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    CachedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    PublishedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Summary = table.Column<string>(type: "TEXT", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", nullable: false),
-                    Url = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_CachedNewsArticles", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "CachedWikiPages",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    CachedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    Content = table.Column<string>(type: "TEXT", nullable: false),
-                    PageId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", nullable: false),
-                    Url = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_CachedWikiPages", x => x.Id);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_CachedNewsArticles_Url",
-                table: "CachedNewsArticles",
-                column: "Url",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_CachedWikiPages_PageId",
-                table: "CachedWikiPages",
-                column: "PageId",
-                unique: true);
         }
     }
 }
