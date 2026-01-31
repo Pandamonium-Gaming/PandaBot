@@ -7,6 +7,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PandaBot.Core.Data;
 using Serilog;
+using System.Reflection;
+
+// Get version
+var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
 
 // Create logs directory
 var logsDir = Path.Combine(AppContext.BaseDirectory, "logs");
@@ -20,6 +24,8 @@ Log.Logger = new LoggerConfiguration()
         rollingInterval: RollingInterval.Day,
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
     .CreateLogger();
+
+Log.Information("🤖 PandaBot v{Version} starting...", version);
 
 try
 {
@@ -55,6 +61,7 @@ try
     await host.StartAsync();
     await botService.StartAsync();
 
+    Log.Information("✅ PandaBot v{Version} is running", version);
     Console.WriteLine("Bot is running. Press CTRL+C to exit...");
     
     // Wait for shutdown signal (CTRL+C, SIGTERM, etc.)

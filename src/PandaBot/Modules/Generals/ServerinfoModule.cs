@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace DiscordBot.Modules.Generals;
@@ -28,6 +29,7 @@ public class ServerinfoModule : InteractionModuleBase<SocketInteractionContext>
         var textChannels = guild.TextChannels.Count;
         var voiceChannels = guild.VoiceChannels.Count;
         var members = guild.MemberCount;
+        var botVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
 
         var embed = new EmbedBuilder()
             .WithTitle($"📌 Server Information: {guild.Name}")
@@ -38,6 +40,7 @@ public class ServerinfoModule : InteractionModuleBase<SocketInteractionContext>
             .AddField("💬 Text Channels", textChannels, true)
             .AddField("🎤 Voice Channels", voiceChannels, true)
             .AddField("📅 Created At", guild.CreatedAt.ToString("dd/MM/yyyy"), true)
+            .AddField("🤖 Bot Version", botVersion, true)
             .WithColor(Color.Blue)
             .Build();
 
