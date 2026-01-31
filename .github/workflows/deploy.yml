@@ -8,9 +8,11 @@ on:
 
 env:
   DOTNET_VERSION: '9.0.x'
-  PROJECT_PATH: 'src/HaloCommunityBot/HaloCommunityBot.csproj'
+  PROJECT_PATH: 'src/PandaBot/PandaBot.csproj'
   DEPLOY_USER: 'deployment'
-  DEPLOY_PATH: '/opt/halocommunitybot'
+  DEPLOY_PATH: '/opt/pandabot'
+
+# Required secrets: DEPLOY_SSH_KEY, DEPLOY_HOST
 
 jobs:
   deploy:
@@ -25,8 +27,11 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     
+    - name: Clear NuGet cache
+      run: dotnet nuget locals all --clear
+    
     - name: Restore dependencies
-      run: dotnet restore ${{ env.PROJECT_PATH }}
+      run: dotnet restore ${{ env.PROJECT_PATH }} --verbosity diagnostic
     
     - name: Build
       run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
@@ -44,7 +49,7 @@ jobs:
     - name: Stop bot service
       run: |
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-          "sudo systemctl stop halocommunitybot.service || true"
+          "sudo systemctl stop pandabot.service || true"
     
     - name: Deploy files
       run: |
@@ -55,17 +60,17 @@ jobs:
       run: |
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
           "sudo chown -R ${{ env.DEPLOY_USER }}:${{ env.DEPLOY_USER }} ${{ env.DEPLOY_PATH }} && \
-           chmod +x ${{ env.DEPLOY_PATH }}/HaloCommunityBot"
+           chmod +x ${{ env.DEPLOY_PATH }}/PandaBot"
     
     - name: Start bot service
       run: |
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-          "sudo systemctl start halocommunitybot.service"
+          "sudo systemctl start pandabot.service"
     
     - name: Check service status
       run: |
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-          "sudo systemctl status halocommunitybot.service --no-pager"
+          "sudo systemctl status pandabot.service --no-pager"
     
     - name: Cleanup SSH key
       if: always()
