@@ -53,9 +53,13 @@ jobs:
     
     - name: Deploy files
       run: |
+        rsync -avz --delete -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+          ./publish/ ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/pandabot_publish/
+    
+    - name: Move files to deployment directory
+      run: |
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-          "sudo rsync -avz --delete -e 'ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no' \
-          ${{ env.DEPLOY_USER }}@localhost:./publish/ ${{ env.DEPLOY_PATH }}/"
+          "sudo rsync -avz /tmp/pandabot_publish/ ${{ env.DEPLOY_PATH }}/ && sudo rm -rf /tmp/pandabot_publish/"
     
     - name: Set permissions
       run: |
