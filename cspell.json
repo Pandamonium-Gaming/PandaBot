@@ -135,6 +135,7 @@
     "selectmenu",
     "selectmenubuilder",
     "serialization",
+    "serverinfo",
     "serviceprovider",
     "slashcommand",
     "socketguilduser",
