@@ -51,9 +51,9 @@ dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version 2.
 
 1. Updates version in `src/PandaBot/PandaBot.csproj`
 2. Adds new changelog entry in `CHANGELOG.md` with:
-   - Version number and today's date
-   - Type category (PATCH/MINOR/MAJOR)
-   - Your message
+   * Version number and today's date
+   * Type category (PATCH/MINOR/MAJOR)
+   * Your message
 3. Both files stay synchronized automatically
 
 ### Commit Message Format
@@ -68,19 +68,19 @@ optional body
 
 **Types:**
 
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `refactor:` - Code refactoring
-- `chore:` - Build, CI/CD, deps
-- `docs:` - Documentation
+* `feat:` - New feature
+* `fix:` - Bug fix
+* `refactor:` - Code refactoring
+* `chore:` - Build, CI/CD, deps
+* `docs:` - Documentation
 
 ### GitHub Actions CI Validation
 
 Every push validates that:
 
-- ✓ Version in `.csproj` matches top entry in `CHANGELOG.md`
-- ✓ Project builds successfully
-- ✓ Code compiles with no errors
+* ✓ Version in `.csproj` matches top entry in `CHANGELOG.md`
+* ✓ Project builds successfully
+* ✓ Code compiles with no errors
 
 If validation fails, fix the version mismatch and try again.
 
@@ -106,9 +106,9 @@ Exit code 0 = versions match, exit code 1 = mismatch.
 
 When bumping versions, follow [Semantic Versioning](https://semver.org/):
 
-- **PATCH** (1.0.X): Bug fixes, minor improvements
-- **MINOR** (1.X.0): New features, new commands
-- **MAJOR** (X.0.0): Breaking changes, major architectural changes
+* **PATCH** (1.0.X): Bug fixes, minor improvements
+* **MINOR** (1.X.0): New features, new commands
+* **MAJOR** (X.0.0): Breaking changes, major architectural changes
 
 ## Deployment
 
@@ -145,8 +145,8 @@ If the pre-commit hook is preventing your commit:
    ```
 
 2. Ensure:
-   - `.csproj` version matches changelog top entry
-   - Changelog entry is in correct format: `## [X.Y.Z] - YYYY-MM-DD`
+   * `.csproj` version matches changelog top entry
+   * Changelog entry is in correct format: `## [X.Y.Z] - YYYY-MM-DD`
 
 3. If you need to bypass (not recommended):
 
@@ -180,7 +180,7 @@ src/PandaBot/
 
 ## Resources
 
-- [Discord.Net documentation](https://docs.discord.net/)
-- [Entity Framework Core](https://docs.microsoft.com/en-us/ef/core/)
-- [Semantic Versioning](https://semver.org/)
-- [Conventional Commits](https://www.conventionalcommits.org/)
+* [Discord.Net documentation](https://docs.discord.net/)
+* [Entity Framework Core](https://docs.microsoft.com/en-us/ef/core/)
+* [Semantic Versioning](https://semver.org/)
+* [Conventional Commits](https://www.conventionalcommits.org/)
