@@ -5,11 +5,13 @@ on:
     branches: [ "main" ]
     paths:
       - 'src/**'
+      - 'tools/**'
       - '.github/workflows/dotnet.yml'
   pull_request:
     branches: [ "main" ]
     paths:
       - 'src/**'
+      - 'tools/**'
       - '.github/workflows/dotnet.yml'
 
 env:
