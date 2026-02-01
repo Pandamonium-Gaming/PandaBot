@@ -1,7 +1,5 @@
 #!/bin/bash
-# Pre-commit hook to validate version synchronization between .csproj and CHANGELOG.md
-
-set -e
+# Pre-commit hook to validate version synchronization using the .NET VersionManager tool
 
 # Colors for output
 RED='\033[0;31m'
@@ -11,50 +9,29 @@ NC='\033[0m' # No Color
 
 echo -e "${YELLOW}🔍 Validating version synchronization...${NC}"
 
-# Extract version from .csproj
-CSPROJ_FILE="src/PandaBot/PandaBot.csproj"
-if [ ! -f "$CSPROJ_FILE" ]; then
-    echo -e "${RED}❌ Error: $CSPROJ_FILE not found${NC}"
-    exit 1
+# Check if VersionManager DLL exists, build if not
+DLL_PATH="artifacts/bin/VersionManager/release/VersionManager.dll"
+if [ ! -f "$DLL_PATH" ]; then
+    echo -e "${YELLOW}VersionManager not built. Building now...${NC}"
+    dotnet build tools/VersionManager/VersionManager.csproj -c Release -q
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ Failed to build VersionManager${NC}"
+        exit 1
+    fi
 fi
 
-CSPROJ_VERSION=$(grep -oP '<Version>\K[^<]+' "$CSPROJ_FILE" 2>/dev/null || echo "")
-if [ -z "$CSPROJ_VERSION" ]; then
-    echo -e "${RED}❌ Error: Could not extract version from $CSPROJ_FILE${NC}"
-    exit 1
-fi
+# Run the VersionManager tool
+dotnet "$DLL_PATH" validate
 
-echo -e "📦 Version in .csproj: ${GREEN}$CSPROJ_VERSION${NC}"
-
-# Extract version from CHANGELOG.md
-CHANGELOG_FILE="CHANGELOG.md"
-if [ ! -f "$CHANGELOG_FILE" ]; then
-    echo -e "${RED}❌ Error: $CHANGELOG_FILE not found${NC}"
-    exit 1
-fi
-
-# Get the first version entry (should be at the top)
-CHANGELOG_VERSION=$(grep -oP '## \[\K[^\]]+' "$CHANGELOG_FILE" 2>/dev/null | head -1 || echo "")
-if [ -z "$CHANGELOG_VERSION" ]; then
-    echo -e "${RED}❌ Error: Could not extract version from $CHANGELOG_FILE${NC}"
-    exit 1
-fi
-
-echo -e "📝 Version in CHANGELOG: ${GREEN}$CHANGELOG_VERSION${NC}"
-
-# Compare versions
-if [ "$CSPROJ_VERSION" != "$CHANGELOG_VERSION" ]; then
-    echo -e "\n${RED}❌ Version Mismatch!${NC}"
-    echo -e "   .csproj version:   ${RED}$CSPROJ_VERSION${NC}"
-    echo -e "   CHANGELOG version: ${RED}$CHANGELOG_VERSION${NC}"
+if [ $? -ne 0 ]; then
     echo ""
-    echo -e "${YELLOW}📋 Fix this by:${NC}"
-    echo "   1. Update version in $CSPROJ_FILE to match CHANGELOG"
-    echo "   2. OR update CHANGELOG to match .csproj version"
-    echo "   3. Make sure CHANGELOG entry is: ## [$CSPROJ_VERSION] - YYYY-MM-DD"
+    echo -e "${RED}❌ Commit blocked: Version mismatch!${NC}"
+    echo ""
+    echo -e "${YELLOW}Fix versions using:${NC}"
+    echo "  dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version X.X.X --type patch --message 'Your message'"
     echo ""
     exit 1
 fi
 
-echo -e "\n${GREEN}✅ Versions match! Proceeding with commit...${NC}"
+echo -e "${GREEN}✓ Pre-commit hook passed!${NC}"
 exit 0

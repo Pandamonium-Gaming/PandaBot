@@ -25,21 +25,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Validate version synchronization
-        shell: pwsh
-        run: |
-          $csprojVersion = (Select-String -Path 'src/PandaBot/PandaBot.csproj' -Pattern '<Version>([^<]+)</Version>').Matches[0].Groups[1].Value
-          $changelogVersion = (Select-String -Path 'CHANGELOG.md' -Pattern '## \\?\[([^\]]+)\]').Matches[0].Groups[1].Value
-          if ($csprojVersion -ne $changelogVersion) {
-            Write-Error "Version mismatch: .csproj=$csprojVersion, CHANGELOG=$changelogVersion"
-            exit 1
-          }
-          Write-Host "✓ Versions match: $csprojVersion"
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Build VersionManager
+        run: dotnet build tools/VersionManager/VersionManager.csproj --configuration Release
+
+      - name: Validate version synchronization
+        run: dotnet artifacts/bin/VersionManager/release/VersionManager.dll validate
 
       - name: Clear NuGet cache
         run: dotnet nuget locals all --clear

@@ -5,13 +5,10 @@
 param(
     [ValidateSet('patch', 'minor', 'major')]
     [string]$Type = "patch",
-    
     [switch]$NoCommit
 )
 
 $ErrorActionPreference = "Stop"
-
-# Get current version
 $csprojFile = "src/PandaBot/PandaBot.csproj"
 $csprojContent = Get-Content $csprojFile -Raw
 $versionMatch = [regex]::Match($csprojContent, '<Version>([^<]+)</Version>')
@@ -31,46 +28,28 @@ if ($parts.Count -ne 3) {
 [int]$minor = $parts[1]
 [int]$patch = $parts[2]
 
-# Calculate new version
 switch ($Type) {
-    'major' {
-        $major++
-        $minor = 0
-        $patch = 0
-    }
-    'minor' {
-        $minor++
-        $patch = 0
-    }
-    'patch' {
-        $patch++
-    }
+    'major' { $major++; $minor = 0; $patch = 0 }
+    'minor' { $minor++; $patch = 0 }
+    'patch' { $patch++ }
 }
 
 $newVersion = "$major.$minor.$patch"
 
 Write-Host "Bumping version: $currentVersion → $newVersion" -ForegroundColor Cyan
-Write-Host ""
-
-# Update .csproj
 Write-Host "Updating $csprojFile..." -ForegroundColor Yellow
 $updatedContent = $csprojContent -replace "<Version>$currentVersion</Version>", "<Version>$newVersion</Version>"
 Set-Content -Path $csprojFile -Value $updatedContent -Encoding UTF8
 Write-Host "✓ Updated .csproj" -ForegroundColor Green
 
-# Generate changelog
 Write-Host "Regenerating CHANGELOG.md..." -ForegroundColor Yellow
 & ".\Generate-Changelog.ps1"
 
 if (-not $NoCommit) {
-    Write-Host ""
     Write-Host "Committing changes..." -ForegroundColor Yellow
     git add $csprojFile CHANGELOG.md
     git commit -m "chore: bump version to $newVersion"
-    Write-Host "✓ Committed changes" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "💡 Run 'git push' to deploy!" -ForegroundColor Cyan
+    Write-Host "✓ Committed" -ForegroundColor Green
 }
 
-Write-Host ""
 Write-Host "✅ Version bump complete!" -ForegroundColor Green

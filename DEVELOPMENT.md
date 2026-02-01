@@ -6,7 +6,13 @@
 
 1. Clone the repository
 
-2. Run the setup script for your OS:
+2. Build the VersionManager tool:
+
+   ```bash
+   dotnet build tools/VersionManager/VersionManager.csproj -c Release
+   ```
+
+3. Run the setup script for your OS to configure git hooks:
 
    **Linux/Mac:**
 
@@ -20,41 +26,36 @@
    .\setup-hooks.bat
    ```
 
-3. Configure git to use the hooks:
-   ```bash
-   git config core.hooksPath .githooks
-   ```
-
 The pre-commit hook will now run automatically before each commit to validate version synchronization.
 
 ## Development Workflow
 
-### Quick Version Bump (Automated)
+### Version Management
 
-We provide a PowerShell script that automates version bumping and changelog generation:
+We use a .NET console tool (`VersionManager`) to synchronize versions between `.csproj` and `CHANGELOG.md`. This ensures they never get out of sync.
 
-```powershell
+#### Quick Version Bump (Using VersionManager)
+
+```bash
 # Bump patch version (1.0.4 → 1.0.5)
-.\Bump-Version.ps1 -Type patch
+dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version 1.0.5 --type patch --message "Your change description"
 
 # Bump minor version (1.0.5 → 1.1.0)
-.\Bump-Version.ps1 -Type minor
+dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version 1.1.0 --type minor --message "Your feature description"
 
 # Bump major version (1.1.0 → 2.0.0)
-.\Bump-Version.ps1 -Type major
-
-# Run without auto-committing
-.\Bump-Version.ps1 -Type patch -NoCommit
+dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version 2.0.0 --type major --message "Your breaking change description"
 ```
 
 **What it does:**
+
 1. Updates version in `src/PandaBot/PandaBot.csproj`
 2. Parses git commits using [Conventional Commits](https://www.conventionalcommits.org/)
 3. Auto-generates `CHANGELOG.md` with:
-   - **BREAKING CHANGES** (from `BREAKING CHANGE:` in commit body)
-   - **Added** features (commits starting with `feat:`)
-   - **Fixed** bugs (commits starting with `fix:`)
-   - **Changed** items (commits starting with `refactor:`)
+   * **BREAKING CHANGES** (from `BREAKING CHANGE:` in commit body)
+   * **Added** features (commits starting with `feat:`)
+   * **Fixed** bugs (commits starting with `fix:`)
+   * **Changed** items (commits starting with `refactor:`)
 4. Commits both files with message: `chore: bump version to X.Y.Z`
 
 ## Commit Message Format
@@ -70,13 +71,15 @@ optional footer
 ```
 
 **Types:**
-- `feat:` - New feature (shows in "Added")
-- `fix:` - Bug fix (shows in "Fixed")
-- `refactor:` - Code refactoring (shows in "Changed")
-- `chore:` - Build, CI/CD, deps (not in changelog)
-- `docs:` - Documentation (not in changelog)
+
+* `feat:` - New feature (shows in "Added")
+* `fix:` - Bug fix (shows in "Fixed")
+* `refactor:` - Code refactoring (shows in "Changed")
+* `chore:` - Build, CI/CD, deps (not in changelog)
+* `docs:` - Documentation (not in changelog)
 
 **Examples:**
+
 ```
 feat(discord): add Star Citizen status command
 fix: resolve database migration timeout issue
@@ -87,9 +90,10 @@ BREAKING CHANGE: removed deprecated API endpoint
 ## GitHub Actions CI Validation
 
 Every push runs a CI check that validates:
-- ✓ Version in `.csproj` matches top entry in `CHANGELOG.md`
-- ✓ Project builds successfully
-- ✓ Code compiles with no errors
+
+* ✓ Version in `.csproj` matches top entry in `CHANGELOG.md`
+* ✓ Project builds successfully
+* ✓ Code compiles with no errors
 
 If validation fails, the build will be rejected and you'll need to fix the version mismatch.
 
