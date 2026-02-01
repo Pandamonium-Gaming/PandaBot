@@ -1,5 +1,9 @@
 {
     "chat.tools.terminal.autoApprove": {
         "dotnet build": true
+    },
+    "files.eol": "\n",
+    "[shellscript]": {
+        "files.eol": "\n"
     }
 }
