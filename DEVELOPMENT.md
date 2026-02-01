@@ -29,6 +29,76 @@ The pre-commit hook will now run automatically before each commit to validate ve
 
 ## Development Workflow
 
+### Quick Version Bump (Automated)
+
+We provide a PowerShell script that automates version bumping and changelog generation:
+
+```powershell
+# Bump patch version (1.0.4 → 1.0.5)
+.\Bump-Version.ps1 -Type patch
+
+# Bump minor version (1.0.5 → 1.1.0)
+.\Bump-Version.ps1 -Type minor
+
+# Bump major version (1.1.0 → 2.0.0)
+.\Bump-Version.ps1 -Type major
+
+# Run without auto-committing
+.\Bump-Version.ps1 -Type patch -NoCommit
+```
+
+**What it does:**
+1. Updates version in `src/PandaBot/PandaBot.csproj`
+2. Parses git commits using [Conventional Commits](https://www.conventionalcommits.org/)
+3. Auto-generates `CHANGELOG.md` with:
+   - **BREAKING CHANGES** (from `BREAKING CHANGE:` in commit body)
+   - **Added** features (commits starting with `feat:`)
+   - **Fixed** bugs (commits starting with `fix:`)
+   - **Changed** items (commits starting with `refactor:`)
+4. Commits both files with message: `chore: bump version to X.Y.Z`
+
+## Commit Message Format
+
+To get automatic changelog generation, follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+type(scope): description
+
+optional body
+
+optional footer
+```
+
+**Types:**
+- `feat:` - New feature (shows in "Added")
+- `fix:` - Bug fix (shows in "Fixed")
+- `refactor:` - Code refactoring (shows in "Changed")
+- `chore:` - Build, CI/CD, deps (not in changelog)
+- `docs:` - Documentation (not in changelog)
+
+**Examples:**
+```
+feat(discord): add Star Citizen status command
+fix: resolve database migration timeout issue
+refactor(core): simplify service initialization
+BREAKING CHANGE: removed deprecated API endpoint
+```
+
+## GitHub Actions CI Validation
+
+Every push runs a CI check that validates:
+- ✓ Version in `.csproj` matches top entry in `CHANGELOG.md`
+- ✓ Project builds successfully
+- ✓ Code compiles with no errors
+
+If validation fails, the build will be rejected and you'll need to fix the version mismatch.
+
+### Manual Version Workflow (Optional)
+
+If you prefer to manage versions manually:
+
+### Manual Version Workflow (Optional)
+
 Every code change **MUST** follow these steps before committing:
 
 ### 1. Make Your Code Changes

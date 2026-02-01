@@ -30,13 +30,16 @@ if (-not (Test-Path $changelogFile)) {
     exit 1
 }
 
-$changelogContent = Get-Content $changelogFile -Raw
-$changelogMatch = [regex]::Match($changelogContent, '## \\?\[([^\]]+)\]')
-if (-not $changelogMatch.Success) {
+# Match markdown header with escaped brackets: ## \[version] - date
+$changelogMatches = @(Select-String -Path $changelogFile -Pattern '## \\+\[([^\]]+)\]')
+if ($changelogMatches.Count -eq 0) {
     Write-Host "Error: Could not extract version from $changelogFile" -ForegroundColor Red
+    Write-Host "   Pattern used: '## \\+\[([^\]]+)\]'" -ForegroundColor Gray
+    Write-Host "   First 3 lines of CHANGELOG:" -ForegroundColor Gray
+    Get-Content $changelogFile | Select-Object -First 3 | ForEach-Object { Write-Host "   $_" -ForegroundColor Gray }
     exit 1
 }
-$changelogVersion = $changelogMatch.Groups[1].Value
+$changelogVersion = $changelogMatches[0].Matches[0].Groups[1].Value
 
 Write-Host "Version in CHANGELOG: " -ForegroundColor White -NoNewline
 Write-Host $changelogVersion -ForegroundColor Green
