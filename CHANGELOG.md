@@ -5,6 +5,45 @@ All notable changes to PandaBot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## \[1.0.3] - 2026-02-01
+
+### Added
+
+* Star Citizen server status command (`/starcitizen status`)
+  * Fetches real-time status from RSI status API
+  * Groups components by category (Game Servers, Website, etc.)
+  * Color-coded status indicators with emoji (✅ Operational, ⚠️ Degraded, 🔴 Partial Outage, ❌ Major Outage)
+
+### Changed
+
+* Database migration system cleaned and consolidated
+  * Removed all incremental migrations (7 migration files)
+  * Created single `InitialCreate` migration from current model
+  * Ensures clean database schema with all properties in sync
+
+### Fixed
+
+* Entity Framework Core model/snapshot mismatch resolved
+  * Removed snapshot file and let EF Core regenerate
+  * Consolidated migrations to prevent future sync issues
+  * Service now runs as correct user (`pandabot` instead of `deployment`)
+
+## \[1.0.2] - 2026-01-31
+
+### Added
+
+* Service file deployment in GitHub Actions
+* Passwordless sudo configuration for deployment commands
+* Improved .env file handling in deployment
+
+## \[1.0.1] - 2026-01-31
+
+### Added
+
+* Version bump system
+* Version displayed in bot startup logs
+* Bot version shown in `/serverinfo` command
+
 ## \[1.0.0] - 2026-01-31
 
 ### Added
@@ -15,12 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Caching system for API data
 * Image caching for fast response times
 * Versioning system with startup logging
-* Bot version displayed in `/serverinfo` command
 
 ### Fixed
 
 * Entity Framework Core migration warnings converted to errors
-* Model snapshot now properly reflects `CertificationLevel` property
+* Model snapshot properly reflects all properties
 
 ## Version Bumping Guidelines
 
