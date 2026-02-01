@@ -8,7 +8,7 @@ public class StarCitizenStatusService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<StarCitizenStatusService> _logger;
-    private const string StatusApiUrl = "https://status.robertsspaceindustries.com/api/v2/components.json";
+    private const string StatusApiUrl = "https://status.robertsspaceindustries.com/index.json";
 
     public StarCitizenStatusService(HttpClient httpClient, ILogger<StarCitizenStatusService> logger)
     {
@@ -29,40 +29,33 @@ public class StarCitizenStatusService
             using var doc = JsonDocument.Parse(content);
             var root = doc.RootElement;
 
-            var components = root.GetProperty("components");
-            var lastUpdated = root.GetProperty("page").GetProperty("updated_at").GetString();
+            var summaryStatus = root.GetProperty("summaryStatus").GetString() ?? "unknown";
+            var systems = root.GetProperty("systems");
 
             var embed = new EmbedBuilder()
                 .WithTitle("🚀 Star Citizen Server Status")
                 .WithColor(Color.DarkBlue)
-                .WithThumbnailUrl("https://robertsspaceindustries.com/media/z2vo2a6bzzazp/source/RSI_logo.png")
+                .WithDescription($"**Overall Status:** {GetStatusEmoji(summaryStatus)} {summaryStatus.ToUpper()}")
+                .WithThumbnailUrl(root.GetProperty("logo").GetString())
                 .WithTimestamp(DateTime.UtcNow);
 
-            var statusGroups = new Dictionary<string, List<(string Name, string Status)>>();
-
-            foreach (var component in components.EnumerateArray())
+            foreach (var system in systems.EnumerateArray())
             {
-                var name = component.GetProperty("name").GetString() ?? "Unknown";
-                var status = component.GetProperty("status").GetString() ?? "unknown";
-                var group = component.GetProperty("group").ValueKind == JsonValueKind.Null
-                    ? "Other"
-                    : component.GetProperty("group").GetProperty("name").GetString() ?? "Other";
+                var name = system.GetProperty("name").GetString() ?? "Unknown";
+                var status = system.GetProperty("status").GetString() ?? "unknown";
+                var unresolvedIssues = system.GetProperty("unresolvedIssues").GetArrayLength();
 
-                if (!statusGroups.ContainsKey(group))
+                var statusText = $"{GetStatusEmoji(status)} {status.ToUpper()}";
+                if (unresolvedIssues > 0)
                 {
-                    statusGroups[group] = new List<(string, string)>();
+                    statusText += $" ({unresolvedIssues} issue{(unresolvedIssues > 1 ? "s" : "")})";
                 }
 
-                statusGroups[group].Add((name, status));
+                embed.AddField(name, statusText, inline: false);
             }
 
-            foreach (var group in statusGroups.OrderBy(x => x.Key))
-            {
-                var fieldValue = string.Join("\n", group.Value.Select(x => $"{GetStatusEmoji(x.Status)} {x.Name}"));
-                embed.AddField(group.Key, fieldValue, inline: false);
-            }
-
-            embed.WithFooter($"Last updated: {lastUpdated}");
+            var buildDate = root.GetProperty("buildDate").GetString();
+            embed.WithFooter($"Last updated: {buildDate}");
 
             return embed.Build();
         }

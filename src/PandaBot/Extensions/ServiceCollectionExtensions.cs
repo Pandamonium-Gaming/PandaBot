@@ -60,10 +60,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<AshesForgeDataCacheService>();
 
         // Register Star Citizen services
-        services.AddHttpClient<PandaBot.Services.StarCitizen.StarCitizenStatusService>(client =>
-        {
-            client.DefaultRequestHeaders.Add("User-Agent", "PandaBot/1.0");
-        });
+        services.AddHttpClient<PandaBot.Services.StarCitizen.StarCitizenStatusService>();
 
         // Register EF Core DbContext for SQLite
         var connectionString = configuration.GetConnectionString("DefaultConnection") ?? "Data Source=./pandabot.db";
