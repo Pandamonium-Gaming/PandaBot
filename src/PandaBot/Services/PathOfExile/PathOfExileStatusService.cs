@@ -9,6 +9,7 @@ public class PathOfExileStatusService
     private readonly HttpClient _httpClient;
     private readonly ILogger<PathOfExileStatusService> _logger;
     private const string StatusApiUrl = "https://status.poe.com/api/v2/status.json";
+    private const string ComponentsApiUrl = "https://status.poe.com/api/v2/components.json";
 
     public PathOfExileStatusService(HttpClient httpClient, ILogger<PathOfExileStatusService> logger)
     {
@@ -22,15 +23,14 @@ public class PathOfExileStatusService
         {
             _logger.LogInformation("Fetching Path of Exile status from {Url}", StatusApiUrl);
             
-            var response = await _httpClient.GetAsync(StatusApiUrl);
-            response.EnsureSuccessStatusCode();
+            // Fetch status
+            var statusResponse = await _httpClient.GetAsync(StatusApiUrl);
+            statusResponse.EnsureSuccessStatusCode();
+            var statusContent = await statusResponse.Content.ReadAsStringAsync();
+            using var statusDoc = JsonDocument.Parse(statusContent);
+            var statusRoot = statusDoc.RootElement;
 
-            var content = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(content);
-            var root = doc.RootElement;
-
-            // Get status from the status object
-            var statusObj = root.GetProperty("status");
+            var statusObj = statusRoot.GetProperty("status");
             var statusText = statusObj.GetProperty("description").GetString() ?? "unknown";
             var statusIndicator = statusObj.GetProperty("indicator").GetString() ?? "unknown";
 
@@ -40,40 +40,54 @@ public class PathOfExileStatusService
                 .WithDescription($"**Overall Status:** {GetStatusEmoji(statusIndicator)} {statusText}")
                 .WithTimestamp(DateTime.UtcNow);
 
-            // List components (game servers, web, etc.)
-            if (root.TryGetProperty("components", out var componentsArray))
+            // Fetch components
+            try
             {
+                _logger.LogInformation("Fetching Path of Exile components from {Url}", ComponentsApiUrl);
+                var componentsResponse = await _httpClient.GetAsync(ComponentsApiUrl);
+                componentsResponse.EnsureSuccessStatusCode();
+                var componentsContent = await componentsResponse.Content.ReadAsStringAsync();
+                using var componentsDoc = JsonDocument.Parse(componentsContent);
+                var componentsRoot = componentsDoc.RootElement;
+
                 var operationalComponents = new List<string>();
                 var degradedComponents = new List<string>();
                 var downComponents = new List<string>();
 
-                foreach (var component in componentsArray.EnumerateArray())
+                if (componentsRoot.TryGetProperty("components", out var componentsArray))
                 {
-                    var name = component.GetProperty("name").GetString() ?? "Unknown";
-                    var status = component.GetProperty("status").GetString() ?? "operational";
+                    foreach (var component in componentsArray.EnumerateArray())
+                    {
+                        var name = component.GetProperty("name").GetString() ?? "Unknown";
+                        var status = component.GetProperty("status").GetString() ?? "operational";
 
-                    if (status == "operational")
-                        operationalComponents.Add($"✅ {name}");
-                    else if (status == "degraded_performance")
-                        degradedComponents.Add($"⚠️ {name}");
-                    else if (status == "major_outage")
-                        downComponents.Add($"🔴 {name}");
-                }
+                        if (status == "operational")
+                            operationalComponents.Add($"✅ {name}");
+                        else if (status == "degraded_performance")
+                            degradedComponents.Add($"⚠️ {name}");
+                        else if (status == "major_outage")
+                            downComponents.Add($"🔴 {name}");
+                    }
 
-                if (downComponents.Count > 0)
-                {
-                    embed.AddField("🔴 Major Outage", string.Join("\n", downComponents), inline: false);
-                }
+                    if (downComponents.Count > 0)
+                    {
+                        embed.AddField("🔴 Major Outage", string.Join("\n", downComponents), inline: false);
+                    }
 
-                if (degradedComponents.Count > 0)
-                {
-                    embed.AddField("⚠️ Degraded Performance", string.Join("\n", degradedComponents), inline: false);
-                }
+                    if (degradedComponents.Count > 0)
+                    {
+                        embed.AddField("⚠️ Degraded Performance", string.Join("\n", degradedComponents), inline: false);
+                    }
 
-                if (operationalComponents.Count > 0)
-                {
-                    embed.AddField("✅ Operational", string.Join("\n", operationalComponents), inline: false);
+                    if (operationalComponents.Count > 0)
+                    {
+                        embed.AddField("✅ Operational", string.Join("\n", operationalComponents), inline: false);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to fetch components, continuing with status only");
             }
 
             embed.WithFooter("PoE Status | Last checked");
@@ -101,11 +115,14 @@ public class PathOfExileStatusService
     {
         return (status?.ToLower()) switch
         {
+            "none" => "✅",
+            "minor" => "⚠️",
+            "major" => "🔴",
+            "investigating" => "🔍",
+            "identified" => "🔍",
             "operational" => "✅",
             "degraded_performance" => "⚠️",
             "major_outage" => "🔴",
-            "investigating" => "🔍",
-            "identified" => "🔍",
             _ => "❓"
         };
     }
@@ -114,12 +131,16 @@ public class PathOfExileStatusService
     {
         return (status?.ToLower()) switch
         {
+            "none" => Color.Green,
+            "minor" => Color.Orange,
+            "major" => Color.Red,
+            "investigating" => Color.Gold,
+            "identified" => Color.Gold,
             "operational" => Color.Green,
             "degraded_performance" => Color.Orange,
             "major_outage" => Color.Red,
-            "investigating" => Color.Gold,
-            "identified" => Color.Gold,
             _ => Color.DarkGrey
         };
     }
 }
+

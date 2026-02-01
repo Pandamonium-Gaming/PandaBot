@@ -1,6 +1,12 @@
 # Changelog
 
 
+
+## [1.1.1] - 2026-02-01
+
+### PATCH
+
+- Fix Path of Exile API endpoint parsing
 ## [1.1.0] - 2026-02-01
 
 ### MINOR
