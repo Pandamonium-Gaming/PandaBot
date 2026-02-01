@@ -50,155 +50,75 @@ dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version 2.
 **What it does:**
 
 1. Updates version in `src/PandaBot/PandaBot.csproj`
-2. Parses git commits using [Conventional Commits](https://www.conventionalcommits.org/)
-3. Auto-generates `CHANGELOG.md` with:
-   * **BREAKING CHANGES** (from `BREAKING CHANGE:` in commit body)
-   * **Added** features (commits starting with `feat:`)
-   * **Fixed** bugs (commits starting with `fix:`)
-   * **Changed** items (commits starting with `refactor:`)
-4. Commits both files with message: `chore: bump version to X.Y.Z`
+2. Adds new changelog entry in `CHANGELOG.md` with:
+   - Version number and today's date
+   - Type category (PATCH/MINOR/MAJOR)
+   - Your message
+3. Both files stay synchronized automatically
 
-## Commit Message Format
+### Commit Message Format
 
-To get automatic changelog generation, follow [Conventional Commits](https://www.conventionalcommits.org/):
+Use [Conventional Commits](https://www.conventionalcommits.org/) for clarity:
 
-```
+```bash
 type(scope): description
 
 optional body
-
-optional footer
 ```
 
 **Types:**
 
-* `feat:` - New feature (shows in "Added")
-* `fix:` - Bug fix (shows in "Fixed")
-* `refactor:` - Code refactoring (shows in "Changed")
-* `chore:` - Build, CI/CD, deps (not in changelog)
-* `docs:` - Documentation (not in changelog)
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `refactor:` - Code refactoring
+- `chore:` - Build, CI/CD, deps
+- `docs:` - Documentation
 
-**Examples:**
+### GitHub Actions CI Validation
 
-```
-feat(discord): add Star Citizen status command
-fix: resolve database migration timeout issue
-refactor(core): simplify service initialization
-BREAKING CHANGE: removed deprecated API endpoint
-```
+Every push validates that:
 
-## GitHub Actions CI Validation
+- ✓ Version in `.csproj` matches top entry in `CHANGELOG.md`
+- ✓ Project builds successfully
+- ✓ Code compiles with no errors
 
-Every push runs a CI check that validates:
+If validation fails, fix the version mismatch and try again.
 
-* ✓ Version in `.csproj` matches top entry in `CHANGELOG.md`
-* ✓ Project builds successfully
-* ✓ Code compiles with no errors
+## Standard Workflow
 
-If validation fails, the build will be rejected and you'll need to fix the version mismatch.
+1. Make your code changes
+2. Bump version with VersionManager tool
+3. Commit with appropriate Conventional Commit message
+4. Push to main
+5. GitHub Actions validates and deploys
 
-### Manual Version Workflow (Optional)
+## Manual Version Synchronization (If Needed)
 
-If you prefer to manage versions manually:
-
-### Manual Version Workflow (Optional)
-
-Every code change **MUST** follow these steps before committing:
-
-### 1. Make Your Code Changes
-
-Implement your feature or fix in the codebase.
-
-### 2. Determine Version Bump Type
-
-Follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html):
-
-* **PATCH** (1.0.X): Bug fixes, minor improvements, dependency updates
-* **MINOR** (1.X.0): New features, new commands, significant improvements
-* **MAJOR** (X.0.0): Breaking changes, major architectural changes
-
-### 3. Update Version in `.csproj`
-
-Edit `src/PandaBot/PandaBot.csproj` and update the version:
-
-```xml
-<Version>X.Y.Z</Version>
-```
-
-### 4. Add Changelog Entry
-
-Edit `CHANGELOG.md` and add an entry at the top under a new `## [X.Y.Z] - YYYY-MM-DD` section:
-
-```markdown
-## [1.0.5] - 2026-02-01
-
-### Added
-
-* New feature description
-
-### Fixed
-
-* Bug fix description
-
-### Changed
-
-* Breaking change description
-```
-
-Use these sections as appropriate:
-
-* **Added** - New features or functionality
-* **Changed** - Changes to existing features
-* **Fixed** - Bug fixes
-* **Removed** - Removed features
-* **Deprecated** - Deprecated features
-
-### 5. Build and Test
+To manually validate versions without bumping:
 
 ```bash
-dotnet build -c Release
-# Test your changes locally if needed
+dotnet artifacts/bin/VersionManager/release/VersionManager.dll validate
 ```
 
-### 6. Commit
+Exit code 0 = versions match, exit code 1 = mismatch.
 
-```bash
-git add -A
-git commit -m "chore: bump version to X.Y.Z"
-# or
-git commit -m "feat: add new feature (v1.0.5)"
-```
+## Version Numbering (Semantic Versioning)
 
-**The pre-commit hook will validate that:**
+When bumping versions, follow [Semantic Versioning](https://semver.org/):
 
-* Version in `.csproj` matches the top entry in `CHANGELOG.md`
-* The changelog entry exists and is formatted correctly
-* If validation fails, the commit will be rejected
-
-### 7. Push
-
-```bash
-git push
-```
-
-This triggers GitHub Actions to build and deploy automatically.
+- **PATCH** (1.0.X): Bug fixes, minor improvements
+- **MINOR** (1.X.0): New features, new commands
+- **MAJOR** (X.0.0): Breaking changes, major architectural changes
 
 ## Deployment
 
 The GitHub Actions workflow (`.github/workflows/dotnet.yml`) automatically:
 
-1. Builds the project
-2. Deploys to the server via SSH
-3. Updates the systemd service
-4. The bot restarts with the new version
-
-You can verify the new version is running with:
-
-```bash
-curl http://bothost/bot/version
-# or check logs:
-ssh pandabot@bothost "tail -f /opt/pandabot/logs/pandabot-*.log"
-```
+1. Validates version synchronization
+2. Builds the project
+3. Deploys to the server via SSH
+4. Updates the systemd service
+5. The bot restarts with the new version
 
 ## Common Tasks
 
@@ -219,23 +139,24 @@ grep '<Version>' src/PandaBot/PandaBot.csproj
 If the pre-commit hook is preventing your commit:
 
 1. Check what validation failed:
+
    ```bash
-   .githooks/pre-commit
+   dotnet artifacts/bin/VersionManager/release/VersionManager.dll validate
    ```
 
 2. Ensure:
-   * `.csproj` version matches changelog top entry
-   * Changelog entry is in correct format: `## [X.Y.Z] - YYYY-MM-DD`
-   * You've added content under the version heading
+   - `.csproj` version matches changelog top entry
+   - Changelog entry is in correct format: `## [X.Y.Z] - YYYY-MM-DD`
 
 3. If you need to bypass (not recommended):
+
    ```bash
    git commit --no-verify
    ```
 
 ## Project Structure
 
-```
+```bash
 src/PandaBot/
 ├── Program.cs                 # Entry point, version logging
 ├── PandaBot.csproj           # Version specification (source of truth)
@@ -257,10 +178,9 @@ src/PandaBot/
 6. Increment PATCH version and update CHANGELOG.md
 7. After deployment, sync commands: `/admin sync-commands`
 
-## Questions?
+## Resources
 
-Refer to:
-
-* `CHANGELOG.md` for version history and examples
-* Discord.Net documentation: https://docs.discord.net/
-* Entity Framework Core: https://docs.microsoft.com/en-us/ef/core/
+- [Discord.Net documentation](https://docs.discord.net/)
+- [Entity Framework Core](https://docs.microsoft.com/en-us/ef/core/)
+- [Semantic Versioning](https://semver.org/)
+- [Conventional Commits](https://www.conventionalcommits.org/)
