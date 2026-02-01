@@ -5,14 +5,27 @@
 ### Initial Setup (One Time)
 
 1. Clone the repository
-2. Configure git hooks to run validation on commit:
+
+2. Run the setup script for your OS:
+
+   **Linux/Mac:**
+
+   ```bash
+   bash setup-hooks.sh
+   ```
+
+   **Windows (PowerShell):**
+
+   ```powershell
+   .\setup-hooks.bat
+   ```
+
+3. Configure git to use the hooks:
    ```bash
    git config core.hooksPath .githooks
    ```
-3. Make the pre-commit hook executable:
-   ```bash
-   chmod +x .githooks/pre-commit
-   ```
+
+The pre-commit hook will now run automatically before each commit to validate version synchronization.
 
 ## Development Workflow
 
@@ -26,9 +39,9 @@ Implement your feature or fix in the codebase.
 
 Follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html):
 
-- **PATCH** (1.0.X): Bug fixes, minor improvements, dependency updates
-- **MINOR** (1.X.0): New features, new commands, significant improvements  
-- **MAJOR** (X.0.0): Breaking changes, major architectural changes
+* **PATCH** (1.0.X): Bug fixes, minor improvements, dependency updates
+* **MINOR** (1.X.0): New features, new commands, significant improvements
+* **MAJOR** (X.0.0): Breaking changes, major architectural changes
 
 ### 3. Update Version in `.csproj`
 
@@ -59,11 +72,12 @@ Edit `CHANGELOG.md` and add an entry at the top under a new `## [X.Y.Z] - YYYY-M
 ```
 
 Use these sections as appropriate:
-- **Added** - New features or functionality
-- **Changed** - Changes to existing features
-- **Fixed** - Bug fixes
-- **Removed** - Removed features
-- **Deprecated** - Deprecated features
+
+* **Added** - New features or functionality
+* **Changed** - Changes to existing features
+* **Fixed** - Bug fixes
+* **Removed** - Removed features
+* **Deprecated** - Deprecated features
 
 ### 5. Build and Test
 
@@ -82,9 +96,10 @@ git commit -m "feat: add new feature (v1.0.5)"
 ```
 
 **The pre-commit hook will validate that:**
-- Version in `.csproj` matches the top entry in `CHANGELOG.md`
-- The changelog entry exists and is formatted correctly
-- If validation fails, the commit will be rejected
+
+* Version in `.csproj` matches the top entry in `CHANGELOG.md`
+* The changelog entry exists and is formatted correctly
+* If validation fails, the commit will be rejected
 
 ### 7. Push
 
@@ -97,12 +112,14 @@ This triggers GitHub Actions to build and deploy automatically.
 ## Deployment
 
 The GitHub Actions workflow (`.github/workflows/dotnet.yml`) automatically:
+
 1. Builds the project
 2. Deploys to the server via SSH
 3. Updates the systemd service
 4. The bot restarts with the new version
 
 You can verify the new version is running with:
+
 ```bash
 curl http://bothost/bot/version
 # or check logs:
@@ -133,9 +150,9 @@ If the pre-commit hook is preventing your commit:
    ```
 
 2. Ensure:
-   - `.csproj` version matches changelog top entry
-   - Changelog entry is in correct format: `## [X.Y.Z] - YYYY-MM-DD`
-   - You've added content under the version heading
+   * `.csproj` version matches changelog top entry
+   * Changelog entry is in correct format: `## [X.Y.Z] - YYYY-MM-DD`
+   * You've added content under the version heading
 
 3. If you need to bypass (not recommended):
    ```bash
@@ -169,6 +186,7 @@ src/PandaBot/
 ## Questions?
 
 Refer to:
-- `CHANGELOG.md` for version history and examples
-- Discord.Net documentation: https://docs.discord.net/
-- Entity Framework Core: https://docs.microsoft.com/en-us/ef/core/
+
+* `CHANGELOG.md` for version history and examples
+* Discord.Net documentation: https://docs.discord.net/
+* Entity Framework Core: https://docs.microsoft.com/en-us/ef/core/
