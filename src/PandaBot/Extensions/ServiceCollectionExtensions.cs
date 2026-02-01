@@ -62,6 +62,9 @@ public static class ServiceCollectionExtensions
         // Register Star Citizen services
         services.AddHttpClient<PandaBot.Services.StarCitizen.StarCitizenStatusService>();
 
+        // Register Path of Exile services
+        services.AddHttpClient<PandaBot.Services.PathOfExile.PathOfExileStatusService>();
+
         // Register EF Core DbContext for SQLite
         var connectionString = configuration.GetConnectionString("DefaultConnection") ?? "Data Source=./pandabot.db";
         services.AddDbContext<PandaBot.Core.Data.PandaBotContext>(options =>
