@@ -936,10 +936,10 @@ public class AshesForgeApiService
     private int GetProfessionLevel(JsonElement recipeJson)
     {
         // Try direct integer properties first
-        if (GetIntProperty(recipeJson, "professionLevel") is int profLevel)
+        if (JsonHelper.GetIntProperty(recipeJson, "professionLevel") is int profLevel)
             return profLevel;
         
-        if (GetIntProperty(recipeJson, "level") is int level)
+        if (JsonHelper.GetIntProperty(recipeJson, "level") is int level)
             return level;
         
         // Try certificationLevel as object with name property
@@ -947,7 +947,7 @@ public class AshesForgeApiService
         {
             if (certLevel.ValueKind == JsonValueKind.Object && certLevel.TryGetProperty("name", out var certName))
             {
-                var levelName = GetStringProperty(certLevel, "name") ?? string.Empty;
+                var levelName = JsonHelper.GetStringProperty(certLevel, "name") ?? string.Empty;
                 return GetProfessionLevelFromName(levelName);
             }
             else if (certLevel.ValueKind == JsonValueKind.String)
