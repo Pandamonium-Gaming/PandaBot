@@ -840,4 +840,35 @@ public class AshesRecipeService
         else
             rawMaterials[itemName] = quantity;
     }
+
+    private int GetProfessionLevelFromName(string levelName)
+    {
+        return levelName switch
+        {
+            "Novice" => 0,
+            "Apprentice" => 1,
+            "Journeyman" => 2,
+            "Artisan" => 3,
+            "Master" => 4,
+            "Expert" => 5,
+            "Legendary" => 4,
+            "Ancient" => 5,
+            _ => 0
+        };
+    }
+
+    private string GetLevelNameFromNumber(int levelNumber)
+    {
+        return levelNumber switch
+        {
+            1 => "Novice",
+            2 => "Apprentice",
+            3 => "Journeyman",
+            4 => "Artisan",
+            5 => "Master",
+            6 => "Expert",
+            7 => "Grandmaster",
+            _ => "Unknown"
+        };
+    }
 }
