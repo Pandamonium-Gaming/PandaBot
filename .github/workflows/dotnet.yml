@@ -1,45 +1,135 @@
-name: .NET CI/CD
+name: Build and Deploy
 
 on:
   push:
-    branches: [ "main" ]   # run when pushing to main branch
+    branches: [ "main" ]
+    paths:
+      - 'src/**'
+      - 'tools/**'
+      - '.github/workflows/dotnet.yml'
   pull_request:
-    branches: [ "main" ]   # run when there's a PR to main branch
+    branches: [ "main" ]
+    paths:
+      - 'src/**'
+      - 'tools/**'
+      - '.github/workflows/dotnet.yml'
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: 'src/PandaBot/PandaBot.csproj'
+  DEPLOY_USER: 'deployer'
+  DEPLOY_PATH: '/opt/pandabot'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      # Get code from repo
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Install .NET SDK (example .NET 9, change version according to your project)
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # Restore packages
+      - name: Build VersionManager
+        run: dotnet build tools/VersionManager/VersionManager.csproj --configuration Release
+
+      - name: Validate version synchronization
+        run: dotnet artifacts/bin/VersionManager/release/VersionManager.dll validate
+
+      - name: Clear NuGet cache
+        run: dotnet nuget locals all --clear
+
       - name: Restore dependencies
-        run: dotnet restore src/PandaBot
+        run: dotnet restore ${{ env.PROJECT_PATH }} --verbosity diagnostic
 
-      # Build project
       - name: Build
-        run: dotnet build src/PandaBot --configuration Release --no-restore
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
 
-      # Run tests (if there's a separate test project)
-      # - name: Test
-      #   run: dotnet test tests/PandaBot.Tests --no-build --verbosity normal
-
-      # Publish to artifacts directory
       - name: Publish
-        run: dotnet publish src/PandaBot -c Release -o artifacts/PandaBot
+        run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ./publish
 
-      # Upload artifact to download from GitHub Actions
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PandaBot
-          path: artifacts/PandaBot
+          name: PandaBot-publish
+          path: publish/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: PandaBot-publish
+        path: ./publish
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Stop bot service
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo systemctl stop pandabot.service || true"
+
+    - name: Deploy files
+      run: |
+        rsync -avz --delete -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+          ./publish/ ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/pandabot_publish/
+
+    - name: Move files to deployment directory
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo rsync -avz /tmp/pandabot_publish/ ${{ env.DEPLOY_PATH }}/ && sudo rm -rf /tmp/pandabot_publish/"
+
+    - name: Deploy systemd service file
+      run: |
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no .github/deployment/pandabot.service ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/pandabot.service
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo mv /tmp/pandabot.service /etc/systemd/system/pandabot.service && sudo systemctl daemon-reload"
+
+    - name: Set permissions
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo chown -R pandabot:pandabot ${{ env.DEPLOY_PATH }} && \
+           sudo chmod +x ${{ env.DEPLOY_PATH }}/PandaBot"
+
+    - name: Create/Update .env file
+      env:
+        DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+      run: |
+        printf '%s\n' \
+          "PANDABOT_Discord__Token=$DISCORD_TOKEN" \
+          "PANDABOT_Discord__Prefix=!" \
+          "PANDABOT_ConnectionStrings__DefaultConnection=Data Source=${{ env.DEPLOY_PATH }}/pandabot.db" \
+          "PANDABOT_AshesForge__CacheExpirationHours=24" \
+          "PANDABOT_AshesForge__EnableImageCaching=true" > /tmp/pandabot.env
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no /tmp/pandabot.env ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/pandabot.env
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo mv /tmp/pandabot.env ${{ env.DEPLOY_PATH }}/.env && sudo chmod 600 ${{ env.DEPLOY_PATH }}/.env"
+        rm /tmp/pandabot.env
+
+    - name: Start bot service
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo systemctl start pandabot.service"
+
+    - name: Check service status
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo systemctl status pandabot.service --no-pager"
+
+    - name: Cleanup SSH key
+      if: always()
+      run: rm -f ~/.ssh/deploy_key

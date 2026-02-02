@@ -17,7 +17,8 @@
 mono_crash.*
 
 # Build results
-tools/
+tools/*
+!tools/VersionManager/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/

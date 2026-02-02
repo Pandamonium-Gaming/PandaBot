@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PandaBot.Core.Data;
 using PandaBot.Models.AshesOfCreation;
+using PandaBot.Utils;
 using System.Text;
 using System.Text.Json;
 
@@ -180,26 +181,11 @@ public class AshesRecipeService
             embed.WithThumbnailUrl(iconUrl);
         }
 
-        // Convert profession level to human-readable format
-        // Try to get certificationLevel from RawJson first, fall back to ProfessionLevel
-        var professionLevelDisplay = recipe.ProfessionLevel.ToString();
-        if (!string.IsNullOrEmpty(recipe.RawJson))
-        {
-            try
-            {
-                var certLevel = ExtractCertificationLevelFromJson(recipe.RawJson);
-                if (certLevel != null)
-                {
-                    professionLevelDisplay = certLevel;
-                }
-            }
-            catch
-            {
-                // Use the stored ProfessionLevel if extraction fails
-            }
-        }
-        
-        var professionInfo = $"{recipe.Profession} - {professionLevelDisplay}";
+        // Add profession and certification level
+        var certificationLevel = !string.IsNullOrEmpty(recipe.CertificationLevel) 
+            ? recipe.CertificationLevel 
+            : $"Level {recipe.ProfessionLevel}";
+        var professionInfo = $"{recipe.Profession} - {certificationLevel}";
         embed.AddField("Crafter Level", professionInfo, inline: true);
 
         // Add station if available
@@ -458,20 +444,6 @@ public class AshesRecipeService
             "legendary" => Color.Gold,
             "mythic" => Color.Orange,
             _ => Color.Gold // Default colour
-        };
-    }
-
-    private string GetProfessionLevelName(string profession, int skillPoints)
-    {
-        // Map skill point values to profession tiers (0-10, 10-20, 20-30, 30-40, 40-50)
-        return skillPoints switch
-        {
-            >= 0 and <= 10 => "Novice",
-            > 10 and <= 20 => "Apprentice",
-            > 20 and <= 30 => "Journeyman",
-            > 30 and <= 40 => "Master",
-            > 40 and <= 50 => "Grandmaster",
-            _ => $"Level {skillPoints}"
         };
     }
 
@@ -867,47 +839,5 @@ public class AshesRecipeService
             rawMaterials[itemName] += quantity;
         else
             rawMaterials[itemName] = quantity;
-    }
-
-    private string? GetJsonStringProperty(System.Text.Json.JsonElement element, string propertyName)
-    {
-        if (element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.String)
-            return prop.GetString();
-        return null;
-    }
-
-    private int? GetJsonIntProperty(System.Text.Json.JsonElement element, string propertyName)
-    {
-        if (element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == System.Text.Json.JsonValueKind.Number)
-            return prop.GetInt32();
-        return null;
-    }
-
-    private string GetLevelNameFromNumber(int levelNumber)
-    {
-        return levelNumber switch
-        {
-            0 => "Novice",
-            1 => "Apprentice",
-            2 => "Journeyman",
-            3 => "Master",
-            4 => "Legendary",
-            5 => "Ancient",
-            _ => levelNumber.ToString()
-        };
-    }
-
-    private int GetProfessionLevelFromName(string levelName)
-    {
-        return levelName?.ToLowerInvariant() switch
-        {
-            "novice" => 0,
-            "apprentice" => 1,
-            "journeyman" => 2,
-            "master" => 3,
-            "legendary" => 4,
-            "ancient" => 5,
-            _ => int.TryParse(levelName, out var num) ? num : 0
-        };
     }
 }

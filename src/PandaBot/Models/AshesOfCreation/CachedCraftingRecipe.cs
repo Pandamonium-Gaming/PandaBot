@@ -7,6 +7,7 @@ public class CachedCraftingRecipe
     public string Name { get; set; } = string.Empty;
     public string Profession { get; set; } = string.Empty;
     public int ProfessionLevel { get; set; }
+    public string CertificationLevel { get; set; } = string.Empty;
     public int? OutputItemCachedId { get; set; }
     public string OutputItemId { get; set; } = string.Empty;
     public string OutputItemName { get; set; } = string.Empty;

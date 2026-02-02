@@ -45,6 +45,10 @@ namespace PandaBot.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<string>("CertificationLevel")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("CraftTime")
                         .HasColumnType("INTEGER");
 
