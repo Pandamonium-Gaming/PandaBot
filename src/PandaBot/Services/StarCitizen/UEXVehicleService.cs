@@ -494,28 +494,30 @@ public class UEXVehicleService
 
     private static string FormatLocationInternal(string terminalName, string cityName, string planetName, string starSystemName)
     {
-        var primary = !string.IsNullOrWhiteSpace(terminalName)
-            ? terminalName
+        var system = starSystemName?.Trim() ?? string.Empty;
+        var planet = planetName?.Trim() ?? string.Empty;
+        var location = !string.IsNullOrWhiteSpace(terminalName)
+            ? terminalName.Trim()
             : !string.IsNullOrWhiteSpace(cityName)
-                ? cityName
-                : !string.IsNullOrWhiteSpace(planetName)
-                    ? planetName
-                    : starSystemName;
+                ? cityName.Trim()
+                : string.Empty;
 
-        var regionParts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(cityName) && cityName != primary)
-            regionParts.Add(cityName);
-        if (!string.IsNullOrWhiteSpace(planetName) && planetName != primary)
-            regionParts.Add(planetName);
-        if (!string.IsNullOrWhiteSpace(starSystemName) && starSystemName != primary)
-            regionParts.Add(starSystemName);
+        if (string.IsNullOrWhiteSpace(location) && !string.IsNullOrWhiteSpace(planet))
+            location = planet;
 
-        if (string.IsNullOrWhiteSpace(primary))
+        if (string.IsNullOrWhiteSpace(system) && string.IsNullOrWhiteSpace(planet) && string.IsNullOrWhiteSpace(location))
             return "Unknown";
-        if (regionParts.Count == 0)
-            return primary;
 
-        return $"{primary} ({string.Join(", ", regionParts)})";
+        if (string.IsNullOrWhiteSpace(system))
+            return string.IsNullOrWhiteSpace(planet) ? location : $"{planet} > {location}";
+
+        if (string.IsNullOrWhiteSpace(planet))
+            return string.IsNullOrWhiteSpace(location) ? system : $"{system} > {location}";
+
+        if (string.IsNullOrWhiteSpace(location))
+            return $"{system} > {planet}";
+
+        return $"{system} > {planet} > {location}";
     }
 
     private static string BuildLocationList(List<string> locations)
