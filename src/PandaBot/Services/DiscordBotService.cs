@@ -48,7 +48,17 @@ public class DiscordBotService
             return;
         }
 
-        await _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
+        try
+        {
+            _logger.LogInformation("Loading Discord modules...");
+            await _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
+            _logger.LogInformation("Modules loaded successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load Discord modules. This may indicate a missing dependency or configuration issue.");
+            throw;
+        }
 
         await _client.LoginAsync(TokenType.Bot, _config.Token);
         await _client.StartAsync();

@@ -1,5 +1,6 @@
 using Discord;
 using Discord.Interactions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PandaBot.Services.ReturnOfReckoning;
 
@@ -11,14 +12,7 @@ namespace PandaBot.Modules.ReturnOfReckoning;
 [Group("ror", "Return of Reckoning commands")]
 public class RORModule : InteractionModuleBase<SocketInteractionContext>
 {
-    private readonly RORStatusService _statusService;
-    private readonly ILogger<RORModule> _logger;
-
-    public RORModule(RORStatusService statusService, ILogger<RORModule> logger)
-    {
-        _statusService = statusService;
-        _logger = logger;
-    }
+    public IServiceProvider Services { get; set; } = null!;
 
     /// <summary>
     /// Check the current Return of Reckoning server status
@@ -30,16 +24,20 @@ public class RORModule : InteractionModuleBase<SocketInteractionContext>
 
         try
         {
-            _logger.LogInformation("User {User} checking ROR status", Context.User.Username);
+            var logger = Services.GetRequiredService<ILogger<RORModule>>();
+            var statusService = Services.GetRequiredService<RORStatusService>();
 
-            var status = await _statusService.GetServerStatusAsync();
+            logger.LogInformation("User {User} checking ROR status", Context.User.Username);
+
+            var status = await statusService.GetServerStatusAsync();
             var embed = BuildStatusEmbed(status);
 
             await FollowupAsync(embed: embed);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking ROR status");
+            var logger = Services.GetService<ILogger<RORModule>>();
+            logger?.LogError(ex, "Error checking ROR status");
             await FollowupAsync("Error checking server status. Please try again later.");
         }
     }
