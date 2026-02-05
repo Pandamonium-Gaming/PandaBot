@@ -54,9 +54,12 @@ public class UEXItemService
         {
             _logger.LogInformation("Searching UEX items by name: {SearchTerm}", searchTerm);
 
-            // Get all cached items (they should be pre-loaded or reasonably sized)
+            // Calculate the expiration cutoff (24 hours ago)
+            var expirationCutoff = DateTime.UtcNow.AddHours(-24);
+
+            // Get non-expired cached items from database
             var cachedItems = await _dbContext.UexItemCache
-                .Where(x => !x.IsExpired)
+                .Where(x => x.CachedAt > expirationCutoff)
                 .OrderBy(x => x.Name)
                 .ToListAsync();
 
@@ -92,8 +95,11 @@ public class UEXItemService
     {
         try
         {
+            // Calculate the expiration cutoff (24 hours ago)
+            var expirationCutoff = DateTime.UtcNow.AddHours(-24);
+
             var cached = await _dbContext.UexItemCache
-                .FirstOrDefaultAsync(x => x.UexItemId == uexItemId && !x.IsExpired);
+                .FirstOrDefaultAsync(x => x.UexItemId == uexItemId && x.CachedAt > expirationCutoff);
             return cached;
         }
         catch (Exception ex)
