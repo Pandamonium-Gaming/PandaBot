@@ -65,6 +65,9 @@ public static class ServiceCollectionExtensions
         // Register Path of Exile services
         services.AddHttpClient<PandaBot.Services.PathOfExile.PathOfExileStatusService>();
 
+        // Register Return of Reckoning services
+        services.AddHttpClient<PandaBot.Services.ReturnOfReckoning.RORStatusService>();
+
         // Register EF Core DbContext for SQLite
         var connectionString = configuration.GetConnectionString("DefaultConnection") ?? "Data Source=./pandabot.db";
         services.AddDbContext<PandaBot.Core.Data.PandaBotContext>(options =>
