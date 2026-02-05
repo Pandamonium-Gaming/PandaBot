@@ -1,5 +1,15 @@
 # Changelog
 
+
+## [1.2.2] - 2026-02-05
+
+### Fixed
+
+* Return of Reckoning player count accuracy
+  * Switched from HTML web scraping (unreliable) to official ROR API endpoint
+  * Now uses `https://api.returnofreckoning.com/stats/online_list_new.php?realm_id=1`
+  * More accurate and faster player count reporting
+  * Better error handling for API responses
 ## \[1.2.1] - 2026-02-05
 
 ### Changed

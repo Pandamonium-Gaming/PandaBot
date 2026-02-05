@@ -2,20 +2,29 @@
 
 Essential guidelines for AI code generation on this project. See [AI_INSTRUCTIONS.md](../AI_INSTRUCTIONS.md) for comprehensive documentation.
 
+**⚠️ ENVIRONMENT NOTE:** This project runs on **Windows with PowerShell**. Always use PowerShell cmdlets instead of Unix/Linux commands (e.g., use `Get-ChildItem` instead of `ls`, `Get-Content -Tail` instead of `tail`, `Remove-Item` instead of `rm`). Refer to [AI_INSTRUCTIONS.md](../AI_INSTRUCTIONS.md#powershell-commands) for command equivalents.
+
 ## 🔴 CRITICAL: Version Management
 
 **NEVER manually edit `src/PandaBot/PandaBot.csproj` or `CHANGELOG.md` versions.**
 
-**ALWAYS** use VersionManager tool:
+**ALWAYS** use VersionManager tool. The tool MUST be built before use:
 
 ```bash
-dotnet run --project tools/VersionManager/VersionManager.csproj -- bump --version X.X.X --type patch --message "Your description"
+# Step 1: Build VersionManager as Release
+dotnet build tools/VersionManager/VersionManager.csproj -c Release
+
+# Step 2: Use the built executable
+dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version X.X.X --type patch --message "Your description"
+
+# Step 3: Validate the changes
+dotnet artifacts/bin/VersionManager/release/VersionManager.dll validate
+
+# Step 4: Build main project to verify compile
+dotnet build
 ```
 
-Then validate:
-```bash
-dotnet run --project tools/VersionManager/VersionManager.csproj -- validate
-```
+**Important:** ✅ Always increment PandaBot version in sync with build bumps. ✅ Verify CHANGELOG formatting is consistent (use `### Fixed`, `### Added`, etc. with bullet points, not dashes).
 
 ## Commit Message Format
 

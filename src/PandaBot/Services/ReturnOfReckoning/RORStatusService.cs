@@ -1,17 +1,17 @@
-using System.Text.RegularExpressions;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using PandaBot.Models.ReturnOfReckoning;
 
 namespace PandaBot.Services.ReturnOfReckoning;
 
 /// <summary>
-/// Service for fetching Return of Reckoning server status and player counts
+/// Service for fetching Return of Reckoning server status and player counts via API
 /// </summary>
 public class RORStatusService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<RORStatusService> _logger;
-    private const string RorWebsiteUrl = "https://www.returnofreckoning.com/";
+    private const string RorApiUrl = "https://api.returnofreckoning.com/stats/online_list_new.php?realm_id=1";
 
     public RORStatusService(HttpClient httpClient, ILogger<RORStatusService> logger)
     {
@@ -20,20 +20,20 @@ public class RORStatusService
     }
 
     /// <summary>
-    /// Fetches the current server status and player count from the ROR website
+    /// Fetches the current server status and player count from the ROR API
     /// </summary>
     public async Task<RORStatus> GetServerStatusAsync()
     {
         try
         {
-            _logger.LogInformation("Fetching Return of Reckoning server status from {Url}", RorWebsiteUrl);
+            _logger.LogInformation("Fetching Return of Reckoning server stats from {Url}", RorApiUrl);
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            var response = await _httpClient.GetAsync(RorWebsiteUrl, cts.Token);
+            var response = await _httpClient.GetAsync(RorApiUrl, cts.Token);
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to fetch ROR website: {StatusCode}", response.StatusCode);
+                _logger.LogWarning("Failed to fetch ROR API: {StatusCode}", response.StatusCode);
                 return new RORStatus
                 {
                     IsOnline = false,
@@ -41,12 +41,12 @@ public class RORStatusService
                 };
             }
 
-            var html = await response.Content.ReadAsStringAsync(cts.Token);
-            return ParseStatusFromHtml(html);
+            var json = await response.Content.ReadAsStringAsync(cts.Token);
+            return ParseStatusFromJson(json);
         }
         catch (TaskCanceledException)
         {
-            _logger.LogWarning("Request to ROR website timed out");
+            _logger.LogWarning("Request to ROR API timed out");
             return new RORStatus
             {
                 IsOnline = false,
@@ -65,55 +65,53 @@ public class RORStatusService
     }
 
     /// <summary>
-    /// Parses the HTML from the ROR website to extract status and player count
+    /// Parses the JSON from the ROR API to extract status and player count
     /// </summary>
-    private RORStatus ParseStatusFromHtml(string html)
+    private RORStatus ParseStatusFromJson(string json)
     {
         var status = new RORStatus();
 
         try
         {
-            // Look for server status indicator classes
-            // The website uses "server-status-online" or "server-status-offline" class
-            if (html.Contains("server-status-online") || html.Contains("status-online"))
-            {
-                status.IsOnline = true;
-                _logger.LogInformation("ROR server is online");
-            }
-            else if (html.Contains("server-status-offline") || html.Contains("status-offline"))
-            {
-                status.IsOnline = false;
-                _logger.LogInformation("ROR server is offline");
-            }
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
 
-            // Try to extract player count from common patterns
-            // Look for patterns like "Players: 123" or "123 Players" or similar
-            var playerCountPatterns = new[]
-            {
-                @"(?:Players?|players?)\s*:?\s*(\d+)",  // "Players: 123" or "players 123"
-                @"(\d+)\s*(?:Players?|players?)",         // "123 Players"
-                @"<span[^>]*>(\d+)</span>.*?(?:player|Player)", // HTML span with number near "player"
-                @"data-players=""(\d+)""",                // data attribute
-                @"playercount[""']?\s*:\s*(\d+)",        // JSON-like playercount
-            };
+            // The API should return an array of online characters
+            // If we get a response, the server is online
+            status.IsOnline = true;
+            _logger.LogInformation("ROR server is online");
 
-            foreach (var pattern in playerCountPatterns)
+            // Count the number of characters in the array
+            if (root.ValueKind == JsonValueKind.Array)
             {
-                var match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
-                if (match.Success && int.TryParse(match.Groups[1].Value, out var playerCount))
+                var playerCount = root.GetArrayLength();
+                status.PlayerCount = playerCount;
+                _logger.LogInformation("ROR online player count: {PlayerCount}", playerCount);
+            }
+            else if (root.TryGetProperty("count", out var countElement))
+            {
+                // In case the API returns a count property
+                if (countElement.TryGetInt32(out var count))
                 {
-                    status.PlayerCount = playerCount;
-                    _logger.LogInformation("ROR player count: {PlayerCount}", playerCount);
-                    break;
+                    status.PlayerCount = count;
+                    _logger.LogInformation("ROR online player count: {PlayerCount}", count);
                 }
             }
 
             status.LastChecked = DateTime.UtcNow;
         }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Error parsing ROR API response");
+            // If we got a response without parsing errors, assume server is up
+            status.IsOnline = true;
+            status.StatusMessage = "Unable to parse player count";
+            status.LastChecked = DateTime.UtcNow;
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error parsing ROR website HTML");
-            status.StatusMessage = "Error parsing status";
+            _logger.LogError(ex, "Error processing ROR API response");
+            status.StatusMessage = "Error processing response";
         }
 
         return status;

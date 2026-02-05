@@ -2,6 +2,54 @@
 
 This file provides guidelines for AI agents (like GitHub Copilot) working on the PandaBot codebase.
 
+**⚠️ ENVIRONMENT NOTE:** This project runs on **Windows with PowerShell**. Always use PowerShell cmdlets instead of Unix/Linux commands (no `ls`, `tail`, `rm`, `cat`, `grep`, etc.). See section [PowerShell Commands](#powershell-commands) for equivalents.
+
+## PowerShell Commands
+
+**CRITICAL:** This codebase runs on Windows. Always use PowerShell cmdlets, NOT bash equivalent commands.
+
+| Task | PowerShell | ❌ DON'T USE |
+|------|-----------|------------|
+| List files | `Get-ChildItem` or `dir` | `ls` |
+| View file end | `Get-Content -Tail 20 filename` | `tail` |
+| View file | `Get-Content filename` | `cat` |
+| Delete file | `Remove-Item filename` | `rm` |
+| Find text | `Select-String "pattern" filename` | `grep` |
+| Find files | `Get-ChildItem -Filter "*.txt" -Recurse` | `find` |
+| Check if exists | `Test-Path filename` | `test -f` |
+| JSON pretty-print | `ConvertFrom-Json \| ConvertTo-Json -Depth 10` | `jq` |
+
+### Common PowerShell Operations
+
+```powershell
+# List files in directory
+Get-ChildItem
+
+# List files recursively (including subfolders)
+Get-ChildItem -Recurse
+
+# View last 20 lines of a file
+Get-Content logs/bot.log -Tail 20
+
+# View entire file
+Get-Content appsettings.json
+
+# Search for text in files
+Select-String "error" logs/bot.log
+
+# Search in multiple files
+Get-ChildItem -Recurse | Select-String "TODO"
+
+# Delete a file
+Remove-Item filename.txt
+
+# Check if file exists
+Test-Path filename.txt
+
+# Test API endpoint (returns valid JSON)
+(Invoke-WebRequest -Uri "https://api.example.com/endpoint" -TimeoutSec 10).Content | ConvertFrom-Json
+```
+
 ## Version Management
 
 **CRITICAL: Always use VersionManager tool for version changes**
@@ -10,17 +58,22 @@ Never manually edit `PandaBot.csproj` or `CHANGELOG.md` version numbers.
 
 ### Version Bump Workflow
 
-1. **Bump the version:**
+1. **Build VersionManager as Release (REQUIRED):**
    ```bash
-   dotnet run --project tools/VersionManager/VersionManager.csproj -- bump --version X.X.X --type patch --message "Brief description of changes"
+   dotnet build tools/VersionManager/VersionManager.csproj -c Release
    ```
 
-2. **Validate the bump:**
+2. **Bump the version:**
    ```bash
-   dotnet run --project tools/VersionManager/VersionManager.csproj -- validate
+   dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version X.X.X --type patch --message "Brief description of changes"
    ```
 
-3. **Build to verify:**
+3. **Validate the bump:**
+   ```bash
+   dotnet artifacts/bin/VersionManager/release/VersionManager.dll validate
+   ```
+
+4. **Build to verify:**
    ```bash
    dotnet build
    ```
@@ -35,14 +88,24 @@ Never manually edit `PandaBot.csproj` or `CHANGELOG.md` version numbers.
 
 ```bash
 # Fix for a specific issue
-dotnet run --project tools/VersionManager/VersionManager.csproj -- bump --version 1.2.2 --type patch --message "Fix ROR module DI issue"
+dotnet build tools/VersionManager/VersionManager.csproj -c Release
+dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version 1.2.2 --type patch --message "Fix ROR module DI issue"
 
 # New feature added
-dotnet run --project tools/VersionManager/VersionManager.csproj -- bump --version 1.3.0 --type minor --message "Add Return of Reckoning module"
+dotnet build tools/VersionManager/VersionManager.csproj -c Release
+dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version 1.3.0 --type minor --message "Add Return of Reckoning module"
 
 # Breaking change
-dotnet run --project tools/VersionManager/VersionManager.csproj -- bump --version 2.0.0 --type major --message "Refactor DI system"
+dotnet build tools/VersionManager/VersionManager.csproj -c Release
+dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version 2.0.0 --type major --message "Refactor DI system"
 ```
+
+### Important Notes
+
+- **Always build release first:** The VersionManager must be compiled as Release before use
+- **Use the built .dll:** Execute from `artifacts/bin/VersionManager/release/VersionManager.dll`, not via `dotnet run`
+- **CHANGELOG consistency:** Verify CHANGELOG.md uses consistent formatting (e.g., `### Fixed`, `### Added` with bullet points)
+- **Increment PandaBot version:** Always keep version numbers in sync between .csproj and CHANGELOG.md
 
 ## Commit Messages
 
@@ -254,6 +317,41 @@ src/PandaBot/
    - Connect to test Discord server
    - Run `/about` to see bot info and verify changes
    - Test new features manually
+
+## Testing External APIs
+
+**ALWAYS test external API endpoints before integrating them into services.**
+
+### Before Implementation
+
+Use PowerShell to validate the API response:
+
+```powershell
+# Test API endpoint returns valid JSON
+(Invoke-WebRequest -Uri "https://api.example.com/endpoint" -TimeoutSec 10).Content | ConvertFrom-Json
+
+# Pretty-print the response to understand structure
+(Invoke-WebRequest -Uri "https://api.example.com/endpoint" -TimeoutSec 10).Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
+```
+
+### Validation Checklist
+
+- [ ] API endpoint is accessible (no 404, 500 errors)
+- [ ] Response is valid JSON (not HTML error pages)
+- [ ] Response structure matches service expectations
+- [ ] Response includes required fields for parsing
+- [ ] Response handles errors gracefully (rate limits, timeouts, offline)
+- [ ] Service code parses response correctly
+- [ ] Build succeeds: `dotnet build`
+
+### Example: Testing ROR API
+
+```powershell
+# Validate ROR API returns player list
+(Invoke-WebRequest -Uri "https://api.returnofreckoning.com/stats/online_list_new.php?realm_id=1" -TimeoutSec 10).Content | ConvertFrom-Json | Measure-Object
+
+# Output shows array length (player count)
+```
 
 ## Common Tasks
 
