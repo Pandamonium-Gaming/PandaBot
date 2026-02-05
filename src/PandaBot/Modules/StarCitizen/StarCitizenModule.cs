@@ -208,6 +208,16 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             }
 
             await FollowupAsync(embed: embed, ephemeral: false);
+            
+            // Remove the dropdown components from the original message
+            try
+            {
+                await Context.Interaction.ModifyOriginalResponseAsync(props => props.Components = new Discord.ComponentBuilder().Build());
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to remove dropdown components");
+            }
         }
         catch (Exception ex)
         {
@@ -351,6 +361,16 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             }
 
             await FollowupAsync(embed: embed, ephemeral: false);
+            
+            // Remove the dropdown components from the original message
+            try
+            {
+                await Context.Interaction.ModifyOriginalResponseAsync(props => props.Components = new Discord.ComponentBuilder().Build());
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to remove dropdown components");
+            }
         }
         catch (Exception ex)
         {
