@@ -113,18 +113,18 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             
             // Create select menu with options
             var selectMenuBuilder = new SelectMenuBuilder()
+                .WithCustomId($"item_select:{Context.User.Id}")
                 .WithPlaceholder("Select an item to view prices")
-                .WithCustomId("item_select_menu")
                 .WithMinValues(1)
                 .WithMaxValues(1);
 
-            // Add options (limit to Discord's max of 25 options)
+            // Add options with just the IDs as values
             var optionCount = 0;
             foreach (var item in matches.Take(Math.Min(25, matches.Count)))
             {
                 selectMenuBuilder.AddOption(
                     label: $"{item.Name} ({item.Category})",
-                    value: $"item_select_{item.UexItemId}",
+                    value: item.UexItemId.ToString(),
                     description: $"ID: {item.UexItemId}");
                 optionCount++;
                 logger.LogDebug("Added option {OptionNum}: {ItemName} (UexItemId: {UexItemId})", 
@@ -153,8 +153,8 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
         }
     }
 
-    [ComponentInteraction("item_select_menu")]
-    public async Task ItemSelectHandler(string[] values)
+    [ComponentInteraction("item_select:*", true)]
+    public async Task ItemSelectHandler(string userId, string[] values)
     {
         await DeferAsync();
 
@@ -162,15 +162,20 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
         
         try
         {
-            if (!values.Any() || !values[0].StartsWith("item_select_"))
+            if (Context.User.Id.ToString() != userId)
+            {
+                await FollowupAsync("This selection menu is not for you.", ephemeral: true);
+                return;
+            }
+
+            if (!values.Any())
             {
                 await FollowupAsync("❌ Invalid selection. Please try the search again.", ephemeral: false);
                 return;
             }
 
-            // Extract the item ID from the value (format: item_select_{UexItemId})
-            var selectionValue = values[0];
-            var itemIdStr = selectionValue.Replace("item_select_", "");
+            // Extract the item ID from the value
+            var itemIdStr = values[0];
 
             if (!int.TryParse(itemIdStr, out var itemId))
             {
