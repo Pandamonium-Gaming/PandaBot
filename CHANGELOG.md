@@ -3,6 +3,12 @@
 
 
 
+
+## [1.3.0] - 2026-02-05
+
+### MINOR
+
+- Implement SC Ship / Vehicle and Item commands
 ## [1.2.4] - 2026-02-05
 
 ### PATCH
