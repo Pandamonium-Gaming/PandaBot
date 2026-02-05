@@ -24,7 +24,9 @@ dotnet artifacts/bin/VersionManager/release/VersionManager.dll validate
 dotnet build
 ```
 
-**Important:** ✅ Always increment PandaBot version in sync with build bumps. ✅ Verify CHANGELOG formatting is consistent (use `### Fixed`, `### Added`, etc. with bullet points, not dashes).
+**Automatic Build Validation:** 🚀 The build process now automatically validates version consistency. If `PandaBot.csproj` version doesn't match `CHANGELOG.md` version, the build **WILL FAIL**. This prevents accidental version mismatches.
+
+**Important:** ✅ Always increment PandaBot version in sync with build bumps. ✅ Verify CHANGELOG formatting is consistent (use `### Fixed`, `### Added`, etc. with bullet points, not dashes). ✅ Never commit code that breaks the build due to version mismatch.
 
 ## Commit Message Format
 

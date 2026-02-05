@@ -1,6 +1,12 @@
 # Changelog
 
 
+
+## [1.2.3] - 2026-02-05
+
+### PATCH
+
+- Add full command names with aliases and PowerShell documentation updates
 ## [1.2.2] - 2026-02-05
 
 ### Fixed

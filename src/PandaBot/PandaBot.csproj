@@ -5,7 +5,7 @@
     <AssemblyName>PandaBot</AssemblyName>
     <OutputType>Exe</OutputType>
     <UserSecretsId>ca866cec-4adc-4fb2-b01f-ffc1982d3939</UserSecretsId>
-    <Version>1.2.2</Version>
+    <Version>1.2.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -38,5 +38,18 @@
     <Folder Include="Attributes\" />
     <Folder Include="Utils\" />
   </ItemGroup>
+
+  <!-- Validate version consistency after build -->
+  <Target Name="ValidateVersionConsistency" AfterTargets="Build">
+    <PropertyGroup>
+      <!-- Repository root is 2 levels up from this file -->
+      <RepoRoot>$(MSBuildThisFileDirectory)..\..</RepoRoot>
+      <!-- Normalize to handle any trailing slashes -->
+      <RepoRootNormalized>$([System.IO.Path]::GetFullPath('$(RepoRoot)'))</RepoRootNormalized>
+    </PropertyGroup>
+    <Message Text="Validating version consistency from: $(RepoRootNormalized)" Importance="high" />
+    <Exec Command="cd /D &quot;$(RepoRootNormalized)&quot; &amp;&amp; dotnet &quot;$(RepoRootNormalized)\artifacts\bin\VersionManager\release\VersionManager.dll&quot; validate" 
+          ContinueOnError="false" />
+  </Target>
 
 </Project>
