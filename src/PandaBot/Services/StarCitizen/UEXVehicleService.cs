@@ -148,9 +148,14 @@ public class UEXVehicleService
                 return new();
 
             var prices = new List<VehiclePrice>();
-            var isFirstPrice = true;
             foreach (var priceElement in dataArray.EnumerateArray())
             {
+                var lastUpdated = DateTime.UtcNow;
+                if (priceElement.TryGetProperty("date_modified", out var dm) && dm.TryGetInt64(out var dmVal))
+                    lastUpdated = DateTimeOffset.FromUnixTimeSeconds(dmVal).UtcDateTime;
+                else if (priceElement.TryGetProperty("date_added", out var da) && da.TryGetInt64(out var daVal))
+                    lastUpdated = DateTimeOffset.FromUnixTimeSeconds(daVal).UtcDateTime;
+
                 var price = new VehiclePrice
                 {
                     VehicleId = vehicleId,
@@ -159,17 +164,17 @@ public class UEXVehicleService
                     LocationName = priceElement.TryGetProperty("location_name", out var ln) ? ln.GetString() ?? "" : "",
                     BuyPrice = priceElement.TryGetProperty("buy_price", out var bp) && bp.TryGetDecimal(out var bpVal) ? bpVal : 0,
                     SellPrice = priceElement.TryGetProperty("sell_price", out var sp) && sp.TryGetDecimal(out var spVal) ? spVal : 0,
-                    Timestamp = priceElement.TryGetProperty("timestamp", out var ts) && DateTime.TryParse(ts.GetString(), out var tsVal) ? tsVal : DateTime.UtcNow
+                    OnSale = GetBoolProperty(priceElement, "on_sale"),
+                    OnSaleWarbond = GetBoolProperty(priceElement, "on_sale_warbond"),
+                    OnSalePackage = GetBoolProperty(priceElement, "on_sale_package"),
+                    OnSaleConcierge = GetBoolProperty(priceElement, "on_sale_concierge"),
+                    Currency = priceElement.TryGetProperty("currency", out var cur) ? cur.GetString() ?? "" : "",
+                    GameVersion = priceElement.TryGetProperty("game_version", out var gv) ? gv.GetString() ?? "" : "",
+                    Timestamp = priceElement.TryGetProperty("timestamp", out var ts) && DateTime.TryParse(ts.GetString(), out var tsVal)
+                        ? tsVal
+                        : lastUpdated
                 };
                 prices.Add(price);
-
-                // Log first price for debugging
-                if (isFirstPrice)
-                {
-                    _logger.LogInformation("Sample price data - TerminalCode: {Code}, TerminalName: {TName}, LocationName: {Loc}, Buy: {Buy}, Sell: {Sell}",
-                        price.TerminalCode, price.TerminalName, price.LocationName ?? "NULL", price.BuyPrice, price.SellPrice);
-                    isFirstPrice = false;
-                }
             }
 
             return prices;
@@ -237,16 +242,37 @@ public class UEXVehicleService
 
             // Enrich location information
             var locations = prices.Select(p => p.LocationName).Where(l => !string.IsNullOrWhiteSpace(l)).Distinct().OrderBy(l => l).ToList();
-            _logger.LogInformation("Found {LocationCount} unique locations for vehicle {VehicleId}: {Locations}", 
-                locations.Count, vehicleId, string.Join(", ", locations));
-            
-            var locationInfo = string.Join(", ", locations);
-            if (locationInfo.Length > 1024) // Discord field value max length
-                locationInfo = string.Join(", ", locations.Take(Math.Min(5, locations.Count))) + (locations.Count > 5 ? $", +{locations.Count - 5} more" : "");
-            
-            embed.AddField("📍 Locations", $"{locations.Count} location(s): {locationInfo}", inline: false);
-            embed.WithFooter($"Last updated: {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC");
-            embed.WithTimestamp(DateTime.UtcNow);
+            if (locations.Any())
+            {
+                var locationInfo = string.Join(", ", locations);
+                if (locationInfo.Length > 1024) // Discord field value max length
+                    locationInfo = string.Join(", ", locations.Take(Math.Min(5, locations.Count))) + (locations.Count > 5 ? $", +{locations.Count - 5} more" : "");
+
+                embed.AddField("📍 Locations", $"{locations.Count} location(s): {locationInfo}", inline: false);
+            }
+            else
+            {
+                var currencies = prices.Select(p => p.Currency).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList();
+                var currencyText = currencies.Count == 0 ? "Unknown" : string.Join(", ", currencies);
+                var gameVersions = prices.Select(p => p.GameVersion).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct().ToList();
+                var versionText = gameVersions.Count == 0 ? "Unknown" : string.Join(", ", gameVersions);
+
+                var availability = new List<string>
+                {
+                    $"On Sale: {(prices.Any(p => p.OnSale) ? "Yes" : "No")}",
+                    $"Warbond: {(prices.Any(p => p.OnSaleWarbond) ? "Yes" : "No")}",
+                    $"Package: {(prices.Any(p => p.OnSalePackage) ? "Yes" : "No")}",
+                    $"Concierge: {(prices.Any(p => p.OnSaleConcierge) ? "Yes" : "No")}",
+                    $"Currency: {currencyText}",
+                    $"Game Version: {versionText}"
+                };
+
+                embed.AddField("🛒 Availability", string.Join("\n", availability), inline: false);
+            }
+
+            var lastUpdated = prices.Max(p => p.Timestamp);
+            embed.WithFooter($"Last updated: {lastUpdated:yyyy-MM-dd HH:mm} UTC");
+            embed.WithTimestamp(lastUpdated);
 
             return embed.Build();
         }
@@ -312,5 +338,24 @@ public class UEXVehicleService
         }
 
         return d[len1, len2];
+    }
+
+    private static bool GetBoolProperty(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var prop))
+        {
+            if (prop.ValueKind == JsonValueKind.True)
+                return true;
+            if (prop.ValueKind == JsonValueKind.False)
+                return false;
+            if (prop.TryGetInt32(out var intValue))
+                return intValue != 0;
+            if (prop.ValueKind == JsonValueKind.String)
+            {
+                var strValue = prop.GetString()?.ToLower() ?? "";
+                return strValue is "1" or "true" or "yes";
+            }
+        }
+        return false;
     }
 }

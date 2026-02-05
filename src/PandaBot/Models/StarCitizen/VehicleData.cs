@@ -24,6 +24,12 @@ public class VehiclePrice
     public string LocationName { get; set; } = string.Empty;
     public decimal BuyPrice { get; set; }
     public decimal SellPrice { get; set; }
+    public bool OnSale { get; set; }
+    public bool OnSaleWarbond { get; set; }
+    public bool OnSalePackage { get; set; }
+    public bool OnSaleConcierge { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public string GameVersion { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
 }
 
