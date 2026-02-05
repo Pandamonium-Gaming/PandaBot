@@ -34,6 +34,48 @@ public class VehiclePrice
 }
 
 /// <summary>
+/// Represents an in-game vehicle purchase price entry
+/// </summary>
+public class VehiclePurchasePrice
+{
+    public int VehicleId { get; set; }
+    public decimal PriceBuy { get; set; }
+    public string StarSystemName { get; set; } = string.Empty;
+    public string PlanetName { get; set; } = string.Empty;
+    public string OrbitName { get; set; } = string.Empty;
+    public string MoonName { get; set; } = string.Empty;
+    public string SpaceStationName { get; set; } = string.Empty;
+    public string CityName { get; set; } = string.Empty;
+    public string OutpostName { get; set; } = string.Empty;
+    public string PoiName { get; set; } = string.Empty;
+    public string TerminalName { get; set; } = string.Empty;
+    public string TerminalCode { get; set; } = string.Empty;
+    public string GameVersion { get; set; } = string.Empty;
+    public DateTime Timestamp { get; set; }
+}
+
+/// <summary>
+/// Represents an in-game vehicle rental price entry
+/// </summary>
+public class VehicleRentalPrice
+{
+    public int VehicleId { get; set; }
+    public decimal PriceRent { get; set; }
+    public string StarSystemName { get; set; } = string.Empty;
+    public string PlanetName { get; set; } = string.Empty;
+    public string OrbitName { get; set; } = string.Empty;
+    public string MoonName { get; set; } = string.Empty;
+    public string SpaceStationName { get; set; } = string.Empty;
+    public string CityName { get; set; } = string.Empty;
+    public string OutpostName { get; set; } = string.Empty;
+    public string PoiName { get; set; } = string.Empty;
+    public string TerminalName { get; set; } = string.Empty;
+    public string TerminalCode { get; set; } = string.Empty;
+    public string GameVersion { get; set; } = string.Empty;
+    public DateTime Timestamp { get; set; }
+}
+
+/// <summary>
 /// Summary information for a vehicle
 /// </summary>
 public class VehicleSummary

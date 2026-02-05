@@ -12,6 +12,8 @@ public class UEXVehicleService
 {
     private const string VehiclesEndpoint = "https://api.uexcorp.uk/2.0/vehicles";
     private const string VehiclesPricesEndpoint = "https://api.uexcorp.uk/2.0/vehicles_prices";
+    private const string VehiclesPurchasePricesEndpoint = "https://api.uexcorp.uk/2.0/vehicles_purchases_prices";
+    private const string VehiclesRentalPricesEndpoint = "https://api.uexcorp.uk/2.0/vehicles_rentals_prices";
     private const int ItemCacheDurationMinutes = 1440; // 24 hours
     
     private readonly HttpClient _httpClient;
@@ -209,6 +211,9 @@ public class UEXVehicleService
                 return null;
             }
 
+            var purchasePrices = await FetchVehiclePurchasePricesAsync(vehicleId);
+            var rentalPrices = await FetchVehicleRentalPricesAsync(vehicleId);
+
             // Build summary
             var buyPrices = prices.Where(p => p.BuyPrice > 0).ToList();
             var sellPrices = prices.Where(p => p.SellPrice > 0).ToList();
@@ -270,7 +275,46 @@ public class UEXVehicleService
                 embed.AddField("🛒 Availability", string.Join("\n", availability), inline: false);
             }
 
-            var lastUpdated = prices.Max(p => p.Timestamp);
+            if (purchasePrices.Any())
+            {
+                var cheapestPurchase = purchasePrices.OrderBy(p => p.PriceBuy).First();
+                embed.AddField("🛒 Purchase Price",
+                    $"{cheapestPurchase.PriceBuy:F0} aUEC @ {FormatLocation(cheapestPurchase)}",
+                    inline: false);
+
+                var purchaseLocations = purchasePrices
+                    .Select(FormatLocation)
+                    .Where(l => !string.IsNullOrWhiteSpace(l))
+                    .Distinct()
+                    .OrderBy(l => l)
+                    .ToList();
+                embed.AddField("🧾 Purchase Locations",
+                    $"{purchaseLocations.Count} location(s): {BuildLocationList(purchaseLocations)}",
+                    inline: false);
+            }
+
+            if (rentalPrices.Any())
+            {
+                var cheapestRental = rentalPrices.OrderBy(p => p.PriceRent).First();
+                embed.AddField("🛠️ Rental Price",
+                    $"{cheapestRental.PriceRent:F0} aUEC @ {FormatLocation(cheapestRental)}",
+                    inline: false);
+
+                var rentalLocations = rentalPrices
+                    .Select(FormatLocation)
+                    .Where(l => !string.IsNullOrWhiteSpace(l))
+                    .Distinct()
+                    .OrderBy(l => l)
+                    .ToList();
+                embed.AddField("🧾 Rental Locations",
+                    $"{rentalLocations.Count} location(s): {BuildLocationList(rentalLocations)}",
+                    inline: false);
+            }
+
+            var timestamps = new List<DateTime>(prices.Select(p => p.Timestamp));
+            timestamps.AddRange(purchasePrices.Select(p => p.Timestamp));
+            timestamps.AddRange(rentalPrices.Select(p => p.Timestamp));
+            var lastUpdated = timestamps.Count == 0 ? DateTime.UtcNow : timestamps.Max();
             embed.WithFooter($"Last updated: {lastUpdated:yyyy-MM-dd HH:mm} UTC");
             embed.WithTimestamp(lastUpdated);
 
@@ -338,6 +382,151 @@ public class UEXVehicleService
         }
 
         return d[len1, len2];
+    }
+
+    private async Task<List<VehiclePurchasePrice>> FetchVehiclePurchasePricesAsync(int vehicleId)
+    {
+        var cacheKey = $"uex_vehicle_purchase_{vehicleId}";
+        if (_cache.TryGetValue(cacheKey, out List<VehiclePurchasePrice>? cachedPrices) && cachedPrices != null)
+            return cachedPrices;
+
+        var response = await _httpClient.GetAsync($"{VehiclesPurchasePricesEndpoint}?id_vehicle={vehicleId}");
+        if (!response.IsSuccessStatusCode)
+            return new();
+
+        var content = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(content);
+        var root = doc.RootElement;
+
+        if (!root.TryGetProperty("data", out var dataArray) || dataArray.ValueKind != JsonValueKind.Array)
+            return new();
+
+        var prices = new List<VehiclePurchasePrice>();
+        foreach (var priceElement in dataArray.EnumerateArray())
+        {
+            var timestamp = DateTime.UtcNow;
+            if (priceElement.TryGetProperty("date_modified", out var dm) && dm.TryGetInt64(out var dmVal))
+                timestamp = DateTimeOffset.FromUnixTimeSeconds(dmVal).UtcDateTime;
+            else if (priceElement.TryGetProperty("date_added", out var da) && da.TryGetInt64(out var daVal))
+                timestamp = DateTimeOffset.FromUnixTimeSeconds(daVal).UtcDateTime;
+
+            prices.Add(new VehiclePurchasePrice
+            {
+                VehicleId = vehicleId,
+                PriceBuy = priceElement.TryGetProperty("price_buy", out var pb) && pb.TryGetDecimal(out var pbVal) ? pbVal : 0,
+                StarSystemName = priceElement.TryGetProperty("star_system_name", out var ss) ? ss.GetString() ?? "" : "",
+                PlanetName = priceElement.TryGetProperty("planet_name", out var pn) ? pn.GetString() ?? "" : "",
+                OrbitName = priceElement.TryGetProperty("orbit_name", out var on) ? on.GetString() ?? "" : "",
+                MoonName = priceElement.TryGetProperty("moon_name", out var mn) ? mn.GetString() ?? "" : "",
+                SpaceStationName = priceElement.TryGetProperty("space_station_name", out var sn) ? sn.GetString() ?? "" : "",
+                CityName = priceElement.TryGetProperty("city_name", out var cn) ? cn.GetString() ?? "" : "",
+                OutpostName = priceElement.TryGetProperty("outpost_name", out var op) ? op.GetString() ?? "" : "",
+                PoiName = priceElement.TryGetProperty("poi_name", out var poi) ? poi.GetString() ?? "" : "",
+                TerminalName = priceElement.TryGetProperty("terminal_name", out var tn) ? tn.GetString() ?? "" : "",
+                TerminalCode = priceElement.TryGetProperty("terminal_code", out var tc) ? tc.GetString() ?? "" : "",
+                GameVersion = priceElement.TryGetProperty("game_version", out var gv) ? gv.GetString() ?? "" : "",
+                Timestamp = timestamp
+            });
+        }
+
+        _cache.Set(cacheKey, prices, TimeSpan.FromMinutes(ItemCacheDurationMinutes));
+        return prices;
+    }
+
+    private async Task<List<VehicleRentalPrice>> FetchVehicleRentalPricesAsync(int vehicleId)
+    {
+        var cacheKey = $"uex_vehicle_rental_{vehicleId}";
+        if (_cache.TryGetValue(cacheKey, out List<VehicleRentalPrice>? cachedPrices) && cachedPrices != null)
+            return cachedPrices;
+
+        var response = await _httpClient.GetAsync($"{VehiclesRentalPricesEndpoint}?id_vehicle={vehicleId}");
+        if (!response.IsSuccessStatusCode)
+            return new();
+
+        var content = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(content);
+        var root = doc.RootElement;
+
+        if (!root.TryGetProperty("data", out var dataArray) || dataArray.ValueKind != JsonValueKind.Array)
+            return new();
+
+        var prices = new List<VehicleRentalPrice>();
+        foreach (var priceElement in dataArray.EnumerateArray())
+        {
+            var timestamp = DateTime.UtcNow;
+            if (priceElement.TryGetProperty("date_modified", out var dm) && dm.TryGetInt64(out var dmVal))
+                timestamp = DateTimeOffset.FromUnixTimeSeconds(dmVal).UtcDateTime;
+            else if (priceElement.TryGetProperty("date_added", out var da) && da.TryGetInt64(out var daVal))
+                timestamp = DateTimeOffset.FromUnixTimeSeconds(daVal).UtcDateTime;
+
+            prices.Add(new VehicleRentalPrice
+            {
+                VehicleId = vehicleId,
+                PriceRent = priceElement.TryGetProperty("price_rent", out var pr) && pr.TryGetDecimal(out var prVal) ? prVal : 0,
+                StarSystemName = priceElement.TryGetProperty("star_system_name", out var ss) ? ss.GetString() ?? "" : "",
+                PlanetName = priceElement.TryGetProperty("planet_name", out var pn) ? pn.GetString() ?? "" : "",
+                OrbitName = priceElement.TryGetProperty("orbit_name", out var on) ? on.GetString() ?? "" : "",
+                MoonName = priceElement.TryGetProperty("moon_name", out var mn) ? mn.GetString() ?? "" : "",
+                SpaceStationName = priceElement.TryGetProperty("space_station_name", out var sn) ? sn.GetString() ?? "" : "",
+                CityName = priceElement.TryGetProperty("city_name", out var cn) ? cn.GetString() ?? "" : "",
+                OutpostName = priceElement.TryGetProperty("outpost_name", out var op) ? op.GetString() ?? "" : "",
+                PoiName = priceElement.TryGetProperty("poi_name", out var poi) ? poi.GetString() ?? "" : "",
+                TerminalName = priceElement.TryGetProperty("terminal_name", out var tn) ? tn.GetString() ?? "" : "",
+                TerminalCode = priceElement.TryGetProperty("terminal_code", out var tc) ? tc.GetString() ?? "" : "",
+                GameVersion = priceElement.TryGetProperty("game_version", out var gv) ? gv.GetString() ?? "" : "",
+                Timestamp = timestamp
+            });
+        }
+
+        _cache.Set(cacheKey, prices, TimeSpan.FromMinutes(ItemCacheDurationMinutes));
+        return prices;
+    }
+
+    private static string FormatLocation(VehiclePurchasePrice price)
+    {
+        return FormatLocationInternal(price.TerminalName, price.CityName, price.PlanetName, price.StarSystemName);
+    }
+
+    private static string FormatLocation(VehicleRentalPrice price)
+    {
+        return FormatLocationInternal(price.TerminalName, price.CityName, price.PlanetName, price.StarSystemName);
+    }
+
+    private static string FormatLocationInternal(string terminalName, string cityName, string planetName, string starSystemName)
+    {
+        var primary = !string.IsNullOrWhiteSpace(terminalName)
+            ? terminalName
+            : !string.IsNullOrWhiteSpace(cityName)
+                ? cityName
+                : !string.IsNullOrWhiteSpace(planetName)
+                    ? planetName
+                    : starSystemName;
+
+        var regionParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(cityName) && cityName != primary)
+            regionParts.Add(cityName);
+        if (!string.IsNullOrWhiteSpace(planetName) && planetName != primary)
+            regionParts.Add(planetName);
+        if (!string.IsNullOrWhiteSpace(starSystemName) && starSystemName != primary)
+            regionParts.Add(starSystemName);
+
+        if (string.IsNullOrWhiteSpace(primary))
+            return "Unknown";
+        if (regionParts.Count == 0)
+            return primary;
+
+        return $"{primary} ({string.Join(", ", regionParts)})";
+    }
+
+    private static string BuildLocationList(List<string> locations)
+    {
+        if (locations.Count == 0)
+            return "None";
+
+        var locationInfo = string.Join(", ", locations);
+        if (locationInfo.Length > 1024)
+            locationInfo = string.Join(", ", locations.Take(Math.Min(5, locations.Count))) + (locations.Count > 5 ? $", +{locations.Count - 5} more" : "");
+        return locationInfo;
     }
 
     private static bool GetBoolProperty(JsonElement element, string propertyName)
