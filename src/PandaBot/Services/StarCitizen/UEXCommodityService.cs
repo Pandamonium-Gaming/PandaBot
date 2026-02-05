@@ -1,7 +1,9 @@
 using Discord;
+using PandaBot.Models;
 using PandaBot.Models.StarCitizen;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace PandaBot.Services.StarCitizen;
 
@@ -12,13 +14,24 @@ public class UEXCommodityService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<UEXCommodityService> _logger;
-    private const string UEXApiBaseUrl = "https://api.uexcorp.space";
+    private readonly UEXConfig _config;
     private const string CommoditySearchEndpoint = "/api/v1/commodities/search";
 
-    public UEXCommodityService(HttpClient httpClient, ILogger<UEXCommodityService> logger)
+    public UEXCommodityService(HttpClient httpClient, ILogger<UEXCommodityService> logger, IOptions<UEXConfig> config)
     {
         _httpClient = httpClient;
         _logger = logger;
+        _config = config.Value;
+
+        // Configure HttpClient with base address and timeout
+        _httpClient.BaseAddress = new Uri(_config.ApiBaseUrl ?? "https://api.uexcorp.space");
+        _httpClient.Timeout = TimeSpan.FromSeconds(_config.TimeoutSeconds);
+
+        // Set up bearer token authentication if configured
+        if (!string.IsNullOrWhiteSpace(_config.BearerToken))
+        {
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_config.BearerToken}");
+        }
     }
 
     /// <summary>
@@ -119,7 +132,7 @@ public class UEXCommodityService
     {
         try
         {
-            var url = $"{UEXApiBaseUrl}{CommoditySearchEndpoint}?search={Uri.EscapeDataString(commodityName)}";
+            var url = $"{CommoditySearchEndpoint}?search={Uri.EscapeDataString(commodityName)}";
             _logger.LogDebug("Querying UEX API: {Url}", url);
 
             var response = await _httpClient.GetAsync(url);

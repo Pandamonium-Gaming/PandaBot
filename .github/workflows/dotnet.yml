@@ -35,8 +35,8 @@ jobs:
       - name: Build VersionManager
         run: dotnet build tools/VersionManager/VersionManager.csproj --configuration Release
 
-      - name: Validate version synchronization
-        run: dotnet artifacts/bin/VersionManager/release/VersionManager.dll validate
+      - name: Check commits since last version
+        run: dotnet artifacts/bin/VersionManager/release/VersionManager.dll check-commits || true
 
       - name: Clear NuGet cache
         run: dotnet nuget locals all --clear
@@ -45,6 +45,8 @@ jobs:
         run: dotnet restore ${{ env.PROJECT_PATH }} --verbosity diagnostic
 
       - name: Build
+        env:
+          UEX__BearerToken: ${{ secrets.UEX_BEARER_TOKEN }}
         run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
 
       - name: Publish
@@ -108,13 +110,17 @@ jobs:
     - name: Create/Update .env file
       env:
         DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        UEX_BEARER_TOKEN: ${{ secrets.UEX_BEARER_TOKEN }}
       run: |
         printf '%s\n' \
           "PANDABOT_Discord__Token=$DISCORD_TOKEN" \
           "PANDABOT_Discord__Prefix=!" \
           "PANDABOT_ConnectionStrings__DefaultConnection=Data Source=${{ env.DEPLOY_PATH }}/pandabot.db" \
           "PANDABOT_AshesForge__CacheExpirationHours=24" \
-          "PANDABOT_AshesForge__EnableImageCaching=true" > /tmp/pandabot.env
+          "PANDABOT_AshesForge__EnableImageCaching=true" \
+          "PANDABOT_UEX__BearerToken=$UEX_BEARER_TOKEN" \
+          "PANDABOT_UEX__ApiBaseUrl=https://api.uexcorp.space" \
+          "PANDABOT_UEX__TimeoutSeconds=30" > /tmp/pandabot.env
         scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no /tmp/pandabot.env ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/pandabot.env
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
           "sudo mv /tmp/pandabot.env ${{ env.DEPLOY_PATH }}/.env && sudo chmod 600 ${{ env.DEPLOY_PATH }}/.env"

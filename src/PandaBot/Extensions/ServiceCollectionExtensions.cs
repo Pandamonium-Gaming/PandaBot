@@ -70,6 +70,9 @@ public static class ServiceCollectionExtensions
         // Register Star Citizen services (if enabled)
         if (gameModulesConfig.EnableStarCitizen)
         {
+            // Bind UEX API configuration
+            services.Configure<UEXConfig>(configuration.GetSection("UEX"));
+            
             services.AddHttpClient<PandaBot.Services.StarCitizen.StarCitizenStatusService>();
             services.AddHttpClient<PandaBot.Services.StarCitizen.UEXCommodityService>();
         }
