@@ -87,7 +87,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             
             if (!matches.Any())
             {
-                await FollowupAsync($"❌ Could not find any items matching '{itemName}'. Please check the spelling and try again.");
+                await ModifyOriginalResponseAsync(msg => msg.Content = $"❌ Could not find any items matching '{itemName}'. Please check the spelling and try again.");
                 return;
             }
 
@@ -100,11 +100,11 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
 
                 if (embed == null)
                 {
-                    await FollowupAsync($"❌ Could not fetch pricing data for '{match.Name}'. Please try again later.");
+                    await ModifyOriginalResponseAsync(msg => msg.Content = $"❌ Could not fetch pricing data for '{match.Name}'. Please try again later.");
                     return;
                 }
 
-                await FollowupAsync(embed: embed);
+                await ModifyOriginalResponseAsync(msg => msg.Embed = embed);
                 return;
             }
 
@@ -119,27 +119,39 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
                 .WithMaxValues(1);
 
             // Add options (limit to Discord's max of 25 options)
+            var optionCount = 0;
             foreach (var item in matches.Take(Math.Min(25, matches.Count)))
             {
                 selectMenuBuilder.AddOption(
                     label: $"{item.Name} ({item.Category})",
                     value: $"item_select_{item.UexItemId}",
                     description: $"ID: {item.UexItemId}");
+                optionCount++;
+                logger.LogDebug("Added option {OptionNum}: {ItemName} (UexItemId: {UexItemId})", 
+                    optionCount, item.Name, item.UexItemId);
             }
+
+            logger.LogInformation("Building select menu with {OptionCount} options", optionCount);
 
             // Send message with select menu
             var component = new ComponentBuilder()
                 .WithSelectMenu(selectMenuBuilder)
                 .Build();
 
-            await FollowupAsync(
-                text: $"Found **{matches.Count}** items matching '{itemName}'. Please select one:",
-                components: component);
+            logger.LogInformation("Sending select menu response with {MatchCount} matches", matches.Count);
+            
+            await ModifyOriginalResponseAsync(msg => 
+            {
+                msg.Content = $"Found **{matches.Count}** items matching '{itemName}'. Please select one:";
+                msg.Components = component;
+            });
+            
+            logger.LogInformation("Select menu response sent successfully");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching for item: {ItemName}", itemName);
-            await FollowupAsync($"❌ Error searching for item: {ex.Message}");
+            await ModifyOriginalResponseAsync(msg => msg.Content = $"❌ Error searching for item: {ex.Message}");
         }
     }
 
@@ -154,7 +166,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
         {
             if (!values.Any() || !values[0].StartsWith("item_select_"))
             {
-                await FollowupAsync("❌ Invalid selection. Please try the search again.");
+                await ModifyOriginalResponseAsync(msg => msg.Content = "❌ Invalid selection. Please try the search again.");
                 return;
             }
 
@@ -164,7 +176,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
 
             if (!int.TryParse(itemIdStr, out var itemId))
             {
-                await FollowupAsync("❌ Invalid item ID. Please try the search again.");
+                await ModifyOriginalResponseAsync(msg => msg.Content = "❌ Invalid item ID. Please try the search again.");
                 return;
             }
 
@@ -176,7 +188,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             var cachedItem = await uexService.GetCachedItemByIdAsync(itemId);
             if (cachedItem == null)
             {
-                await FollowupAsync("❌ Item not found in cache. Please search again.");
+                await ModifyOriginalResponseAsync(msg => msg.Content = "❌ Item not found in cache. Please search again.");
                 return;
             }
 
@@ -185,16 +197,16 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             
             if (embed == null)
             {
-                await FollowupAsync($"❌ Could not fetch pricing data for '{cachedItem.Name}'. Please try again later.");
+                await ModifyOriginalResponseAsync(msg => msg.Content = $"❌ Could not fetch pricing data for '{cachedItem.Name}'. Please try again later.");
                 return;
             }
 
-            await FollowupAsync(embed: embed);
+            await ModifyOriginalResponseAsync(msg => msg.Embed = embed);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error handling item selection");
-            await FollowupAsync($"❌ Error fetching item data: {ex.Message}");
+            await ModifyOriginalResponseAsync(msg => msg.Content = $"❌ Error fetching item data: {ex.Message}");
         }
     }
 }
