@@ -96,7 +96,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             {
                 var match = matches[0];
                 logger.LogInformation("Found single match for item: {ItemName} (ID: {ItemId})", match.Name, match.UexItemId);
-                var embed = await uexService.GetItemPricesEmbedAsync(match.Name);
+                var embed = await uexService.GetItemPricesEmbedAsync(match.UexItemId);
 
                 if (embed == null)
                 {
@@ -138,12 +138,15 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
                 .WithSelectMenu(selectMenuBuilder)
                 .Build();
 
+            var selectionEmbed = new EmbedBuilder()
+                .WithTitle($"Found {matches.Count} items matching '{itemName}'")
+                .WithDescription("Please select an item from the dropdown below:")
+                .WithColor(Color.Blue)
+                .Build();
+
             logger.LogInformation("Sending select menu response with {MatchCount} matches", matches.Count);
             
-            await FollowupAsync(
-                text: $"Found **{matches.Count}** items matching '{itemName}'. Please select one:",
-                components: component,
-                ephemeral: false);
+            await FollowupAsync(embed: selectionEmbed, components: component, ephemeral: false);
             logger.LogInformation("Select menu response sent successfully");
         }
         catch (Exception ex)
@@ -196,11 +199,11 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             }
 
             // Fetch and display prices
-            var embed = await uexService.GetItemPricesEmbedAsync(cachedItem.Name);
+            var embed = await uexService.GetItemPricesEmbedAsync(itemId);
             
             if (embed == null)
             {
-                await FollowupAsync($"❌ Could not fetch pricing data for '{cachedItem.Name}'. Please try again later.", ephemeral: false);
+                await FollowupAsync($"❌ Could not fetch pricing data for item ID {itemId}. Please try again later.", ephemeral: false);
                 return;
             }
 

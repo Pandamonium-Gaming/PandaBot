@@ -112,27 +112,35 @@ public class UEXItemService
     /// <summary>
     /// Search for an item by name and return formatted pricing information for first match
     /// </summary>
-    public async Task<Embed?> GetItemPricesEmbedAsync(string itemName)
+    public async Task<Embed?> GetItemPricesEmbedAsync(int itemId)
     {
         try
         {
-            _logger.LogInformation("Fetching UEX item data for: {ItemName}", itemName);
+            _logger.LogInformation("Fetching UEX prices for item ID: {ItemId}", itemId);
 
-            var item = await FetchItemAsync(itemName);
-            if (item == null)
+            var cachedItem = await GetCachedItemByIdAsync(itemId);
+            if (cachedItem == null)
             {
-                _logger.LogWarning("Item not found: {ItemName}", itemName);
+                _logger.LogWarning("Item not found in cache: {ItemId}", itemId);
                 return null;
             }
 
-            var prices = await FetchItemPricesAsync(item.Id);
+            var prices = await FetchItemPricesAsync(itemId);
             if (prices == null || prices.Count == 0)
             {
-                _logger.LogWarning("No price data found for item: {ItemName}", itemName);
+                _logger.LogWarning("No price data found for item: {ItemId}", itemId);
                 return null;
             }
 
-            item.Prices = prices;
+            // Build item object with prices
+            var item = new Item
+            {
+                Id = cachedItem.UexItemId,
+                Name = cachedItem.Name,
+                Category = cachedItem.Category,
+                Company = cachedItem.Company,
+                Prices = prices
+            };
 
             // Calculate summary
             var summary = CalculateSummary(item);
@@ -204,17 +212,17 @@ public class UEXItemService
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "HTTP error fetching UEX item data for: {ItemName}", itemName);
+            _logger.LogError(ex, "HTTP error fetching UEX pricing data for item ID: {ItemId}", itemId);
             return null;
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "JSON parsing error for UEX item: {ItemName}", itemName);
+            _logger.LogError(ex, "JSON parsing error for UEX item ID: {ItemId}", itemId);
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error fetching UEX item: {ItemName}", itemName);
+            _logger.LogError(ex, "Unexpected error fetching UEX pricing for item ID: {ItemId}", itemId);
             return null;
         }
     }
