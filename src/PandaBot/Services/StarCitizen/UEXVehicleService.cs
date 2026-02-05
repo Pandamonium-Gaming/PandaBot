@@ -211,20 +211,28 @@ public class UEXVehicleService
             if (buyPrices.Any())
             {
                 var cheapest = buyPrices.OrderBy(p => p.BuyPrice).First();
+                var avgBuy = buyPrices.Average(p => p.BuyPrice);
                 embed.AddField("💰 Cheapest Buy Price",
-                    $"{cheapest.BuyPrice:F2} aUEC @ {cheapest.LocationName}",
+                    $"{cheapest.BuyPrice:F2} aUEC @ {cheapest.LocationName}\nAvg: {avgBuy:F2} aUEC",
                     inline: false);
             }
 
             if (sellPrices.Any())
             {
                 var highest = sellPrices.OrderByDescending(p => p.SellPrice).First();
+                var avgSell = sellPrices.Average(p => p.SellPrice);
                 embed.AddField("📈 Best Sell Price",
-                    $"{highest.SellPrice:F2} aUEC @ {highest.LocationName}",
+                    $"{highest.SellPrice:F2} aUEC @ {highest.LocationName}\nAvg: {avgSell:F2} aUEC",
                     inline: false);
             }
 
-            embed.AddField("📍 Locations", $"{prices.Select(p => p.LocationName).Distinct().Count()} locations tracked", inline: true);
+            // Enrich location information
+            var locations = prices.Select(p => p.LocationName).Distinct().OrderBy(l => l).ToList();
+            var locationInfo = string.Join(", ", locations);
+            if (locationInfo.Length > 1024) // Discord field value max length
+                locationInfo = string.Join(", ", locations.Take(Math.Min(5, locations.Count))) + (locations.Count > 5 ? $", +{locations.Count - 5} more" : "");
+            
+            embed.AddField("📍 Locations", $"{locations.Count} location(s): {locationInfo}", inline: false);
             embed.WithFooter($"Last updated: {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC");
             embed.WithTimestamp(DateTime.UtcNow);
 

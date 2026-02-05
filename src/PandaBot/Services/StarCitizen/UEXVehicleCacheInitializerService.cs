@@ -129,10 +129,22 @@ public class UEXVehicleCacheInitializerService : IHostedService
     {
         if (element.TryGetProperty(propertyName, out var prop))
         {
-            if (prop.TryGetInt32(out int intValue))
-                return intValue != 0;
+            // Handle boolean type
             if (prop.ValueKind == JsonValueKind.True)
                 return true;
+            if (prop.ValueKind == JsonValueKind.False)
+                return false;
+            
+            // Handle integer type (0 or 1)
+            if (prop.TryGetInt32(out int intValue))
+                return intValue != 0;
+            
+            // Handle string type ("0", "1", "true", "false")
+            if (prop.ValueKind == JsonValueKind.String)
+            {
+                var strValue = prop.GetString()?.ToLower() ?? "";
+                return strValue is "1" or "true" or "yes";
+            }
         }
         return false;
     }
@@ -164,6 +176,7 @@ public class UEXVehicleCacheInitializerService : IHostedService
             }
 
             var vehicles = new List<Vehicle>();
+            var isFirstVehicle = true;
             foreach (var vehicleElement in dataArray.EnumerateArray())
             {
                 // Derive vehicle type from boolean flags
@@ -177,6 +190,14 @@ public class UEXVehicleCacheInitializerService : IHostedService
                     Manufacturer = vehicleElement.TryGetProperty("company_name", out var mfg) ? mfg.GetString() ?? "" : ""
                 };
                 vehicles.Add(vehicle);
+
+                // Log first vehicle for debugging
+                if (isFirstVehicle)
+                {
+                    _logger.LogInformation("Sample vehicle - ID: {Id}, Name: {Name}, Type: {Type}, Manufacturer: {Mfg}",
+                        vehicle.Id, vehicle.Name, vehicle.Type, vehicle.Manufacturer ?? "NULL");
+                    isFirstVehicle = false;
+                }
             }
 
             _logger.LogInformation("Fetched {Count} vehicles from API", vehicles.Count);
