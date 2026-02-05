@@ -1,18 +1,67 @@
 # Changelog
 
+## \[1.2.1] - 2026-02-05
 
+### Changed
 
-## [1.1.1] - 2026-02-01
+* Enhanced `/about` command
+  * Now displays bot version number
+  * Shows count of loaded modules and registered commands
+  * Displays Discord.Net framework version
+  * Better organized fields for quick reference
+
+## \[1.2.0] - 2026-02-05
+
+### Added
+
+* Return of Reckoning (ROR) server status module
+  * New `/ror status` slash command to check ROR server status and player counts
+  * Web scraper service that fetches real-time data from returnofreckoning.com
+  * Color-coded embed responses (🟢 Online / 🔴 Offline) with player information
+
+* Configurable game modules system
+  * New `GameModules` configuration section in appsettings.json
+  * Feature flags to enable/disable each game module independently
+  * Conditional dependency injection - only loads services when module is enabled
+  * Supports: Ashes of Creation, Star Citizen, Path of Exile, Return of Reckoning
+
+### Changed
+
+* Enhanced startup diagnostics and logging
+  * Comprehensive logging at every startup phase (host creation, DI registration, DB migrations, module loading, gateway connection)
+  * Module discovery now displays all found modules before loading
+  * Login and client startup phases separately logged for better troubleshooting
+  * Added timeout protection (30s for module loading, 60s for ready signal)
+
+### Fixed
+
+* Critical DI issue preventing bot startup
+  * Fixed RORModule to use runtime service resolution instead of constructor injection
+  * Allows modules to load even when their dependencies aren't registered
+  * Matches pattern used by existing StarCitizen and PathOfExile modules
+
+* Ashes of Creation service issues
+  * Resolved merge conflicts in AshesForgeApiService and AshesRecipeService
+  * Fixed missing `GetProfessionLevelFromName` and `GetLevelNameFromNumber` helper methods
+  * Fixed JsonHelper method calls with proper prefix in GetProfessionLevel()
+
+* Disabled Ashes of Creation by default in production
+  * Set `EnableAshesOfCreation: false` in appsettings.json
+  * Reduces unnecessary API calls and memory usage when module not actively used
+  * Prevents memory cache allocation when module disabled
+
+## \[1.1.1] - 2026-02-01
 
 ### PATCH
 
-- Fix Path of Exile API endpoint parsing
-## [1.1.0] - 2026-02-01
+* Fix Path of Exile API endpoint parsing
+
+## \[1.1.0] - 2026-02-01
 
 ### MINOR
 
-- Add Path of Exile status command
-All notable changes to PandaBot will be documented in this file.
+* Add Path of Exile status command
+  All notable changes to PandaBot will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
