@@ -51,20 +51,61 @@ public class DiscordBotService
         try
         {
             _logger.LogInformation("Loading Discord modules...");
-            await _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
+            
+            // Add timeout to module loading to prevent hanging
+            var moduleLoadingTask = _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
+            var completedTask = await Task.WhenAny(moduleLoadingTask, Task.Delay(TimeSpan.FromSeconds(30)));
+            
+            if (completedTask != moduleLoadingTask)
+            {
+                _logger.LogError("Module loading timed out after 30 seconds");
+                throw new TimeoutException("Discord module loading exceeded 30 second timeout");
+            }
+            
             _logger.LogInformation("Modules loaded successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load Discord modules. This may indicate a missing dependency or configuration issue.");
+            _logger.LogError(ex, "Failed to load Discord modules. This may indicate a missing dependency or configuration issue. Details: {Message}", ex.Message);
             throw;
         }
 
-        await _client.LoginAsync(TokenType.Bot, _config.Token);
-        await _client.StartAsync();
+        try
+        {
+            _logger.LogInformation("Logging in to Discord...");
+            await _client.LoginAsync(TokenType.Bot, _config.Token);
+            _logger.LogInformation("Login successful");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to login to Discord");
+            throw;
+        }
+
+        try
+        {
+            _logger.LogInformation("Starting Discord client...");
+            await _client.StartAsync();
+            _logger.LogInformation("Client started successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start Discord client");
+            throw;
+        }
 
         _logger.LogInformation("Waiting for bot to be ready...");
-        await _readyCompletionSource.Task;
+        var readyTask = _readyCompletionSource.Task;
+        var completedReadyTask = await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromSeconds(60)));
+        
+        if (completedReadyTask != readyTask)
+        {
+            _logger.LogWarning("Bot ready signal not received within 60 seconds, continuing anyway");
+        }
+        else
+        {
+            _logger.LogInformation("Bot is ready");
+        }
     }
 
     public async Task StopAsync()
