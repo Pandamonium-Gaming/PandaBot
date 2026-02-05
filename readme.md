@@ -14,6 +14,13 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development guidelines, includ
 * Pre-commit hook validation
 * Adding new commands
 
+### AI Development Guidelines
+
+**For AI Agents (GitHub Copilot, etc.):**
+
+- **Quick Reference:** [.github/copilot-instructions.md](.github/copilot-instructions.md) - Essential guidelines (auto-loaded by GitHub Copilot)
+- **Comprehensive Guide:** [AI_INSTRUCTIONS.md](AI_INSTRUCTIONS.md) - Complete development patterns, error handling, and workflows
+
 **Quick Setup:**
 
 ```bash
