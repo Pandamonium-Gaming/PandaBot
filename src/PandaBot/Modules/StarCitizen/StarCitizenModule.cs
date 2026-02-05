@@ -87,7 +87,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             
             if (!matches.Any())
             {
-                await FollowupAsync($"❌ Could not find any items matching '{itemName}'. Please check the spelling and try again.");
+                await FollowupAsync($"❌ Could not find any items matching '{itemName}'. Please check the spelling and try again.", ephemeral: false);
                 return;
             }
 
@@ -100,11 +100,11 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
 
                 if (embed == null)
                 {
-                    await FollowupAsync($"❌ Could not fetch pricing data for '{match.Name}'. Please try again later.");
+                    await FollowupAsync($"❌ Could not fetch pricing data for '{match.Name}'. Please try again later.", ephemeral: false);
                     return;
                 }
 
-                await FollowupAsync(embed: embed);
+                await FollowupAsync(embed: embed, ephemeral: false);
                 return;
             }
 
@@ -142,13 +142,14 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             
             await FollowupAsync(
                 text: $"Found **{matches.Count}** items matching '{itemName}'. Please select one:",
-                components: component);
+                components: component,
+                ephemeral: false);
             logger.LogInformation("Select menu response sent successfully");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching for item: {ItemName}", itemName);
-            await FollowupAsync($"❌ Error searching for item: {ex.Message}");
+            await FollowupAsync($"❌ Error searching for item: {ex.Message}", ephemeral: false);
         }
     }
 
@@ -163,7 +164,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
         {
             if (!values.Any() || !values[0].StartsWith("item_select_"))
             {
-                await FollowupAsync("❌ Invalid selection. Please try the search again.");
+                await FollowupAsync("❌ Invalid selection. Please try the search again.", ephemeral: false);
                 return;
             }
 
@@ -173,7 +174,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
 
             if (!int.TryParse(itemIdStr, out var itemId))
             {
-                await FollowupAsync("❌ Invalid item ID. Please try the search again.");
+                await FollowupAsync("❌ Invalid item ID. Please try the search again.", ephemeral: false);
                 return;
             }
 
@@ -185,7 +186,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             var cachedItem = await uexService.GetCachedItemByIdAsync(itemId);
             if (cachedItem == null)
             {
-                await FollowupAsync("❌ Item not found in cache. Please search again.");
+                await FollowupAsync("❌ Item not found in cache. Please search again.", ephemeral: false);
                 return;
             }
 
@@ -194,16 +195,16 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             
             if (embed == null)
             {
-                await FollowupAsync($"❌ Could not fetch pricing data for '{cachedItem.Name}'. Please try again later.");
+                await FollowupAsync($"❌ Could not fetch pricing data for '{cachedItem.Name}'. Please try again later.", ephemeral: false);
                 return;
             }
 
-            await FollowupAsync(embed: embed);
+            await FollowupAsync(embed: embed, ephemeral: false);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error handling item selection");
-            await FollowupAsync($"❌ Error fetching item data: {ex.Message}");
+            await FollowupAsync($"❌ Error fetching item data: {ex.Message}", ephemeral: false);
         }
     }
 }
