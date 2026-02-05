@@ -119,7 +119,7 @@ jobs:
           "PANDABOT_AshesForge__CacheExpirationHours=24" \
           "PANDABOT_AshesForge__EnableImageCaching=true" \
           "PANDABOT_UEX__BearerToken=$UEX_BEARER_TOKEN" \
-          "PANDABOT_UEX__ApiBaseUrl=https://api.uexcorp.space" \
+          "PANDABOT_UEX__ApiBaseUrl=https://api.uexcorp.uk" \
           "PANDABOT_UEX__TimeoutSeconds=30" > /tmp/pandabot.env
         scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no /tmp/pandabot.env ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/pandabot.env
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \

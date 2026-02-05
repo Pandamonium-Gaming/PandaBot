@@ -15,7 +15,8 @@ public class UEXCommodityService
     private readonly HttpClient _httpClient;
     private readonly ILogger<UEXCommodityService> _logger;
     private readonly UEXConfig _config;
-    private const string CommoditySearchEndpoint = "/api/v1/commodities/search";
+    private const string CommoditySearchEndpoint = "/2.0/commodities_prices";
+    private const string UexBadgeUrl = "https://uexcorp.space/img/api/uex-api-badge-powered.png";
 
     public UEXCommodityService(HttpClient httpClient, ILogger<UEXCommodityService> logger, IOptions<UEXConfig> config)
     {
@@ -24,7 +25,7 @@ public class UEXCommodityService
         _config = config.Value;
 
         // Configure HttpClient with base address and timeout
-        _httpClient.BaseAddress = new Uri(_config.ApiBaseUrl ?? "https://api.uexcorp.space");
+        _httpClient.BaseAddress = new Uri(_config.ApiBaseUrl ?? "https://api.uexcorp.uk");
         _httpClient.Timeout = TimeSpan.FromSeconds(_config.TimeoutSeconds);
 
         // Set up bearer token authentication if configured
@@ -58,7 +59,7 @@ public class UEXCommodityService
                 .WithTitle($"📊 {commodity.Name} - Price Summary")
                 .WithColor(Color.Gold)
                 .WithDescription($"**Type:** {commodity.Type}")
-                .WithThumbnailUrl("https://robertsspaceindustries.com/raw/rsi_logo.png");
+                .WithThumbnailUrl(UexBadgeUrl);
 
             // Add price summary fields
             embed.AddField("💰 Lowest Price", 
@@ -132,7 +133,7 @@ public class UEXCommodityService
     {
         try
         {
-            var url = $"{CommoditySearchEndpoint}?search={Uri.EscapeDataString(commodityName)}";
+            var url = $"{CommoditySearchEndpoint}?commodity_name={Uri.EscapeDataString(commodityName)}";
             _logger.LogDebug("Querying UEX API: {Url}", url);
 
             var response = await _httpClient.GetAsync(url);
@@ -147,39 +148,36 @@ public class UEXCommodityService
             using var doc = JsonDocument.Parse(content);
             var root = doc.RootElement;
 
-            // Check if response is successful
-            if (!root.GetProperty("ok").GetBoolean())
+            // Parse the commodity data from the response
+            if (!root.TryGetProperty("data", out var dataArray) || dataArray.GetArrayLength() == 0)
             {
-                _logger.LogWarning("UEX API returned ok=false for commodity: {CommodityName}", commodityName);
+                _logger.LogWarning("UEX API returned no data for commodity: {CommodityName}", commodityName);
                 return null;
             }
 
-            // Parse commodity data
-            var data = root.GetProperty("data");
+            // Get first result (most relevant)
+            var firstResult = dataArray[0];
             var commodity = new Commodity
             {
-                Id = data.GetProperty("id").GetInt32(),
-                Name = data.GetProperty("name").GetString() ?? commodityName,
-                Type = data.GetProperty("type").GetString() ?? "Unknown"
+                Id = firstResult.TryGetProperty("id_commodity", out var id) ? id.GetInt32() : 0,
+                Name = firstResult.TryGetProperty("commodity_name", out var name) ? name.GetString() ?? commodityName : commodityName,
+                Type = firstResult.TryGetProperty("commodity_code", out var code) ? code.GetString() ?? "Unknown" : "Unknown"
             };
 
-            // Parse prices
-            if (data.TryGetProperty("prices", out var pricesElement))
+            // Build commodity prices from all results
+            foreach (var priceElement in dataArray.EnumerateArray())
             {
-                foreach (var priceElement in pricesElement.EnumerateArray())
+                var price = new CommodityPrice
                 {
-                    var price = new CommodityPrice
-                    {
-                        Id = priceElement.TryGetProperty("id", out var id) ? id.GetInt32() : 0,
-                        TerminalCode = priceElement.TryGetProperty("terminal", out var term) ? term.GetString() ?? "" : "",
-                        TerminalName = priceElement.TryGetProperty("terminal_name", out var termName) ? termName.GetString() ?? "" : "",
-                        LocationName = priceElement.TryGetProperty("location", out var loc) ? loc.GetString() ?? "" : "",
-                        BuyPrice = priceElement.TryGetProperty("buy_price", out var buy) ? (decimal)buy.GetDouble() : 0,
-                        SellPrice = priceElement.TryGetProperty("sell_price", out var sell) ? (decimal)sell.GetDouble() : 0,
-                        Timestamp = priceElement.TryGetProperty("updated_at", out var ts) ? ts.GetString() ?? "" : ""
-                    };
-                    commodity.Prices.Add(price);
-                }
+                    Id = priceElement.TryGetProperty("id", out var priceId) ? priceId.GetInt32() : 0,
+                    TerminalCode = priceElement.TryGetProperty("terminal_code", out var termCode) ? termCode.GetString() ?? "" : "",
+                    TerminalName = priceElement.TryGetProperty("terminal_name", out var termName) ? termName.GetString() ?? "" : "",
+                    LocationName = priceElement.TryGetProperty("planet", out var planet) ? planet.GetString() ?? "" : "",
+                    BuyPrice = priceElement.TryGetProperty("price_buy", out var buy) ? (decimal)buy.GetDouble() : 0,
+                    SellPrice = priceElement.TryGetProperty("price_sell", out var sell) ? (decimal)sell.GetDouble() : 0,
+                    Timestamp = priceElement.TryGetProperty("time_update", out var ts) ? ts.GetString() ?? "" : ""
+                };
+                commodity.Prices.Add(price);
             }
 
             return commodity;

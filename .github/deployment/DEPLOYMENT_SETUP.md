@@ -4,9 +4,9 @@ This guide covers setting up PandaBot on a DigitalOcean droplet (or any Linux ho
 
 ## Prerequisites
 
-- Linux host (Ubuntu 20.04+)
-- SSH access with sudo privileges
-- SSH key pair for deployment
+* Linux host (Ubuntu 20.04+)
+* SSH access with sudo privileges
+* SSH key pair for deployment
 
 ## Initial Setup (One-time)
 
@@ -29,6 +29,7 @@ sudo chown deployment:deployment /opt/pandabot
 The deployment workflow automatically creates/updates this file with secrets from GitHub Actions.
 
 Manual creation (if needed):
+
 ```bash
 sudo tee /opt/pandabot/.env > /dev/null <<EOF
 PANDABOT_Discord__Token=your_discord_token_here
@@ -36,6 +37,9 @@ PANDABOT_Discord__Prefix=!
 PANDABOT_ConnectionStrings__DefaultConnection=Data Source=/opt/pandabot/pandabot.db
 PANDABOT_AshesForge__CacheExpirationHours=24
 PANDABOT_AshesForge__EnableImageCaching=true
+PANDABOT_UEX__BearerToken=your_uex_bearer_token_here
+PANDABOT_UEX__ApiBaseUrl=https://api.uexcorp.uk
+PANDABOT_UEX__TimeoutSeconds=30
 EOF
 
 sudo chmod 600 /opt/pandabot/.env
@@ -61,6 +65,7 @@ sudo systemctl enable pandabot.service
 ## Deployment Workflow
 
 The GitHub Actions workflow handles:
+
 1. Building the project
 2. Publishing Release build
 3. Uploading files via SSH
@@ -72,9 +77,10 @@ The GitHub Actions workflow handles:
 
 Set these in your repository settings (Settings → Secrets and variables → Actions):
 
-- `DEPLOY_SSH_KEY`: Private SSH key for deployment user
-- `DEPLOY_HOST`: IP/hostname of your Digital Ocean droplet
-- `DISCORD_TOKEN`: Your Discord bot token
+* `DEPLOY_SSH_KEY`: Private SSH key for deployment user
+* `DEPLOY_HOST`: IP/hostname of your Digital Ocean droplet
+* `DISCORD_TOKEN`: Your Discord bot token
+* `UEX_BEARER_TOKEN`: (Optional) UEX API bearer token for Star Citizen features
 
 ## Managing the Service
 
@@ -100,9 +106,11 @@ sudo systemctl start pandabot.service
 ## Updating Environment Variables
 
 ### Option 1: Via Deployment
-Update the workflow in `.github/workflows/deploy.yml` and push to main branch.
+
+Update the workflow in `.github/workflows/dotnet.yml` and push to main branch. All keys in the generated `.env` must use the `PANDABOT_` prefix to be picked up by the app.
 
 ### Option 2: Manual SSH
+
 ```bash
 ssh deployment@your-host
 sudo nano /opt/pandabot/.env
@@ -113,22 +121,26 @@ sudo systemctl restart pandabot.service
 ## Troubleshooting
 
 ### Service won't start
+
 ```bash
 sudo journalctl -u pandabot.service -n 50
 ```
 
 ### .env file not found
+
 ```bash
 ls -la /opt/pandabot/.env
 # Should show: -rw------- (600 permissions)
 ```
 
 ### Permission denied errors
+
 ```bash
 sudo chown -R deployment:deployment /opt/pandabot
 ```
 
 ### Check if .NET is installed
+
 ```bash
 dotnet --version
 ```
@@ -138,6 +150,7 @@ dotnet --version
 SQLite database is stored at `/opt/pandabot/pandabot.db`. This persists between deployments.
 
 To backup:
+
 ```bash
 cp /opt/pandabot/pandabot.db /opt/pandabot/pandabot.db.backup
 ```
