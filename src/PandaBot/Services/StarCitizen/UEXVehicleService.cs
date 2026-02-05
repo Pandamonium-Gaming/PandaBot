@@ -148,6 +148,7 @@ public class UEXVehicleService
                 return new();
 
             var prices = new List<VehiclePrice>();
+            var isFirstPrice = true;
             foreach (var priceElement in dataArray.EnumerateArray())
             {
                 var price = new VehiclePrice
@@ -161,6 +162,14 @@ public class UEXVehicleService
                     Timestamp = priceElement.TryGetProperty("timestamp", out var ts) && DateTime.TryParse(ts.GetString(), out var tsVal) ? tsVal : DateTime.UtcNow
                 };
                 prices.Add(price);
+
+                // Log first price for debugging
+                if (isFirstPrice)
+                {
+                    _logger.LogInformation("Sample price data - TerminalCode: {Code}, TerminalName: {TName}, LocationName: {Loc}, Buy: {Buy}, Sell: {Sell}",
+                        price.TerminalCode, price.TerminalName, price.LocationName ?? "NULL", price.BuyPrice, price.SellPrice);
+                    isFirstPrice = false;
+                }
             }
 
             return prices;
@@ -227,7 +236,10 @@ public class UEXVehicleService
             }
 
             // Enrich location information
-            var locations = prices.Select(p => p.LocationName).Distinct().OrderBy(l => l).ToList();
+            var locations = prices.Select(p => p.LocationName).Where(l => !string.IsNullOrWhiteSpace(l)).Distinct().OrderBy(l => l).ToList();
+            _logger.LogInformation("Found {LocationCount} unique locations for vehicle {VehicleId}: {Locations}", 
+                locations.Count, vehicleId, string.Join(", ", locations));
+            
             var locationInfo = string.Join(", ", locations);
             if (locationInfo.Length > 1024) // Discord field value max length
                 locationInfo = string.Join(", ", locations.Take(Math.Min(5, locations.Count))) + (locations.Count > 5 ? $", +{locations.Count - 5} more" : "");
