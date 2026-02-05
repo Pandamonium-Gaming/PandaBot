@@ -43,12 +43,15 @@
   <Target Name="ValidateVersionConsistency" AfterTargets="Build">
     <PropertyGroup>
       <!-- Repository root is 2 levels up from this file -->
-      <RepoRoot>$(MSBuildThisFileDirectory)..\..</RepoRoot>
+      <RepoRoot>$(MSBuildThisFileDirectory)../..</RepoRoot>
       <!-- Normalize to handle any trailing slashes -->
       <RepoRootNormalized>$([System.IO.Path]::GetFullPath('$(RepoRoot)'))</RepoRootNormalized>
+      <!-- Construct path with forward slashes for cross-platform compatibility -->
+      <VersionManagerPath>$(RepoRootNormalized)/artifacts/bin/VersionManager/release/VersionManager.dll</VersionManagerPath>
     </PropertyGroup>
     <Message Text="Validating version consistency from: $(RepoRootNormalized)" Importance="high" />
-    <Exec Command="cd /D &quot;$(RepoRootNormalized)&quot; &amp;&amp; dotnet &quot;$(RepoRootNormalized)\artifacts\bin\VersionManager\release\VersionManager.dll&quot; validate" 
+    <Exec Command="dotnet &quot;$(VersionManagerPath)&quot; validate" 
+          WorkingDirectory="$(RepoRootNormalized)"
           ContinueOnError="false" />
   </Target>
 
