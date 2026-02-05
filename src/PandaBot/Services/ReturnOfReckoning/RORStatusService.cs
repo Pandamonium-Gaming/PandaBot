@@ -13,9 +13,9 @@ public class RORStatusService
     private readonly ILogger<RORStatusService> _logger;
     private const string RorWebsiteUrl = "https://www.returnofreckoning.com/";
 
-    public RORStatusService(IHttpClientFactory httpClientFactory, ILogger<RORStatusService> logger)
+    public RORStatusService(HttpClient httpClient, ILogger<RORStatusService> logger)
     {
-        _httpClient = httpClientFactory.CreateClient();
+        _httpClient = httpClient;
         _logger = logger;
     }
 
