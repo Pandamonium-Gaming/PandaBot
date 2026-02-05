@@ -87,7 +87,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             
             if (!matches.Any())
             {
-                await ModifyOriginalResponseAsync(msg => msg.Content = $"❌ Could not find any items matching '{itemName}'. Please check the spelling and try again.");
+                await FollowupAsync($"❌ Could not find any items matching '{itemName}'. Please check the spelling and try again.");
                 return;
             }
 
@@ -100,11 +100,11 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
 
                 if (embed == null)
                 {
-                    await ModifyOriginalResponseAsync(msg => msg.Content = $"❌ Could not fetch pricing data for '{match.Name}'. Please try again later.");
+                    await FollowupAsync($"❌ Could not fetch pricing data for '{match.Name}'. Please try again later.");
                     return;
                 }
 
-                await ModifyOriginalResponseAsync(msg => msg.Embed = embed);
+                await FollowupAsync(embed: embed);
                 return;
             }
 
@@ -140,18 +140,15 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
 
             logger.LogInformation("Sending select menu response with {MatchCount} matches", matches.Count);
             
-            await ModifyOriginalResponseAsync(msg => 
-            {
-                msg.Content = $"Found **{matches.Count}** items matching '{itemName}'. Please select one:";
-                msg.Components = component;
-            });
-            
+            await FollowupAsync(
+                text: $"Found **{matches.Count}** items matching '{itemName}'. Please select one:",
+                components: component);
             logger.LogInformation("Select menu response sent successfully");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching for item: {ItemName}", itemName);
-            await ModifyOriginalResponseAsync(msg => msg.Content = $"❌ Error searching for item: {ex.Message}");
+            await FollowupAsync($"❌ Error searching for item: {ex.Message}");
         }
     }
 
@@ -166,7 +163,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
         {
             if (!values.Any() || !values[0].StartsWith("item_select_"))
             {
-                await ModifyOriginalResponseAsync(msg => msg.Content = "❌ Invalid selection. Please try the search again.");
+                await FollowupAsync("❌ Invalid selection. Please try the search again.");
                 return;
             }
 
@@ -176,7 +173,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
 
             if (!int.TryParse(itemIdStr, out var itemId))
             {
-                await ModifyOriginalResponseAsync(msg => msg.Content = "❌ Invalid item ID. Please try the search again.");
+                await FollowupAsync("❌ Invalid item ID. Please try the search again.");
                 return;
             }
 
@@ -188,7 +185,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             var cachedItem = await uexService.GetCachedItemByIdAsync(itemId);
             if (cachedItem == null)
             {
-                await ModifyOriginalResponseAsync(msg => msg.Content = "❌ Item not found in cache. Please search again.");
+                await FollowupAsync("❌ Item not found in cache. Please search again.");
                 return;
             }
 
@@ -197,16 +194,16 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             
             if (embed == null)
             {
-                await ModifyOriginalResponseAsync(msg => msg.Content = $"❌ Could not fetch pricing data for '{cachedItem.Name}'. Please try again later.");
+                await FollowupAsync($"❌ Could not fetch pricing data for '{cachedItem.Name}'. Please try again later.");
                 return;
             }
 
-            await ModifyOriginalResponseAsync(msg => msg.Embed = embed);
+            await FollowupAsync(embed: embed);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error handling item selection");
-            await ModifyOriginalResponseAsync(msg => msg.Content = $"❌ Error fetching item data: {ex.Message}");
+            await FollowupAsync($"❌ Error fetching item data: {ex.Message}");
         }
     }
 }
