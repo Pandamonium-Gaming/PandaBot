@@ -79,9 +79,11 @@ public static class ServiceCollectionExtensions
             services.AddHttpClient<PandaBot.Services.StarCitizen.StarCitizenStatusService>();
             services.AddHttpClient<PandaBot.Services.StarCitizen.UEXCommodityService>();
             services.AddHttpClient<PandaBot.Services.StarCitizen.UEXItemService>();
+            services.AddHttpClient<PandaBot.Services.StarCitizen.UEXVehicleService>();
 
-            // Register hosted service to initialize item cache on startup
+            // Register hosted services to initialize caches on startup
             services.AddHostedService<PandaBot.Services.StarCitizen.UEXItemCacheInitializerService>();
+            services.AddHostedService<PandaBot.Services.StarCitizen.UEXVehicleCacheInitializerService>();
         }
 
         // Register Path of Exile services (if enabled)

@@ -21,6 +21,7 @@ public class PandaBotContext : DbContext
     public DbSet<MobItemDrop> MobItemDrops { get; set; }
     public DbSet<MobRecipeDrop> MobRecipeDrops { get; set; }
     public DbSet<ItemCache> UexItemCache { get; set; }
+    public DbSet<VehicleCache> UexVehicleCache { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -116,6 +117,15 @@ public class PandaBotContext : DbContext
             entity.HasIndex(e => e.UexItemId).IsUnique();
             entity.HasIndex(e => e.Name);
             entity.HasIndex(e => e.Category);
+            entity.Property(e => e.CachedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        modelBuilder.Entity<VehicleCache>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UexVehicleId).IsUnique();
+            entity.HasIndex(e => e.Name);
+            entity.HasIndex(e => e.Type);
             entity.Property(e => e.CachedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
     }
