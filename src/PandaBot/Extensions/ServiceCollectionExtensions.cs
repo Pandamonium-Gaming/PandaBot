@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using PandaBot.Models;
 using PandaBot.Services.AshesOfCreation;
 
 namespace DiscordBot.Extensions;
@@ -41,32 +42,48 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<DiscordBotService>();
 
-        // Register memory cache for AshesForge services
-        services.AddMemoryCache();
+        // Load game modules configuration
+        var gameModulesConfig = configuration.GetSection("GameModules").Get<GameModulesConfig>() ?? new GameModulesConfig();
+        services.AddSingleton(gameModulesConfig);
 
-        // Register AshesForge services
-        services.AddScoped<ImageCacheService>();
-        services.AddScoped<AshesItemService>();
-        services.AddScoped<AshesRecipeService>();
-        
-        // Register named HttpClient for AshesForge API
-        services.AddHttpClient("AshesForgeApi", client =>
+        // Register Ashes of Creation services (if enabled)
+        if (gameModulesConfig.EnableAshesOfCreation)
         {
-            client.BaseAddress = new Uri("https://www.ashesforge.com/api/");
-            client.DefaultRequestHeaders.Add("User-Agent", "PandaBot/1.0");
-        });
-        
-        services.AddScoped<AshesForgeApiService>();
-        services.AddHostedService<AshesForgeDataCacheService>();
+            // Register memory cache for AshesForge services
+            services.AddMemoryCache();
+            
+            services.AddScoped<ImageCacheService>();
+            services.AddScoped<AshesItemService>();
+            services.AddScoped<AshesRecipeService>();
+            
+            // Register named HttpClient for AshesForge API
+            services.AddHttpClient("AshesForgeApi", client =>
+            {
+                client.BaseAddress = new Uri("https://www.ashesforge.com/api/");
+                client.DefaultRequestHeaders.Add("User-Agent", "PandaBot/1.0");
+            });
+            
+            services.AddScoped<AshesForgeApiService>();
+            services.AddHostedService<AshesForgeDataCacheService>();
+        }
 
-        // Register Star Citizen services
-        services.AddHttpClient<PandaBot.Services.StarCitizen.StarCitizenStatusService>();
+        // Register Star Citizen services (if enabled)
+        if (gameModulesConfig.EnableStarCitizen)
+        {
+            services.AddHttpClient<PandaBot.Services.StarCitizen.StarCitizenStatusService>();
+        }
 
-        // Register Path of Exile services
-        services.AddHttpClient<PandaBot.Services.PathOfExile.PathOfExileStatusService>();
+        // Register Path of Exile services (if enabled)
+        if (gameModulesConfig.EnablePathOfExile)
+        {
+            services.AddHttpClient<PandaBot.Services.PathOfExile.PathOfExileStatusService>();
+        }
 
-        // Register Return of Reckoning services
-        services.AddHttpClient<PandaBot.Services.ReturnOfReckoning.RORStatusService>();
+        // Register Return of Reckoning services (if enabled)
+        if (gameModulesConfig.EnableReturnOfReckoning)
+        {
+            services.AddHttpClient<PandaBot.Services.ReturnOfReckoning.RORStatusService>();
+        }
 
         // Register EF Core DbContext for SQLite
         var connectionString = configuration.GetConnectionString("DefaultConnection") ?? "Data Source=./pandabot.db";
