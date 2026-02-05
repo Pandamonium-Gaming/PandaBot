@@ -269,10 +269,14 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             var optionCount = 0;
             foreach (var vehicle in matches.Take(Math.Min(25, matches.Count)))
             {
+                var description = !string.IsNullOrWhiteSpace(vehicle.Manufacturer) 
+                    ? vehicle.Manufacturer 
+                    : "Unknown Manufacturer";
+                
                 selectMenuBuilder.AddOption(
                     label: $"{vehicle.Name} ({vehicle.Type})",
                     value: vehicle.UexVehicleId.ToString(),
-                    description: $"{vehicle.Manufacturer}");
+                    description: description);
                 optionCount++;
                 logger.LogDebug("Added option {OptionNum}: {VehicleName} (UexVehicleId: {UexVehicleId})", 
                     optionCount, vehicle.Name, vehicle.UexVehicleId);

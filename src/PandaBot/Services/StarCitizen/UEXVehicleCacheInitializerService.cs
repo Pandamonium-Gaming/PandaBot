@@ -85,6 +85,59 @@ public class UEXVehicleCacheInitializerService : IHostedService
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>
+    /// Derive vehicle type from boolean flags in API response
+    /// </summary>
+    private static string DeriveVehicleType(JsonElement vehicleElement)
+    {
+        // Check for ground vehicle first
+        if (GetBoolProperty(vehicleElement, "is_ground_vehicle"))
+            return "Ground Vehicle";
+
+        // Check for specific ship types
+        if (GetBoolProperty(vehicleElement, "is_cargo"))
+            return "Cargo Ship";
+        if (GetBoolProperty(vehicleElement, "is_mining"))
+            return "Mining Ship";
+        if (GetBoolProperty(vehicleElement, "is_medical"))
+            return "Medical Ship";
+        if (GetBoolProperty(vehicleElement, "is_refuel"))
+            return "Refueling Ship";
+        if (GetBoolProperty(vehicleElement, "is_repair"))
+            return "Repair Ship";
+        if (GetBoolProperty(vehicleElement, "is_exploration"))
+            return "Exploration Ship";
+        if (GetBoolProperty(vehicleElement, "is_racing"))
+            return "Racing Ship";
+        if (GetBoolProperty(vehicleElement, "is_bomber"))
+            return "Bomber";
+        if (GetBoolProperty(vehicleElement, "is_military"))
+            return "Military Ship";
+        if (GetBoolProperty(vehicleElement, "is_passenger"))
+            return "Passenger Ship";
+
+        // Default to spaceship if no specific type found
+        if (GetBoolProperty(vehicleElement, "is_spaceship"))
+            return "Spaceship";
+
+        return "Vehicle";
+    }
+
+    /// <summary>
+    /// Helper to safely get boolean property from JSON element
+    /// </summary>
+    private static bool GetBoolProperty(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var prop))
+        {
+            if (prop.TryGetInt32(out int intValue))
+                return intValue != 0;
+            if (prop.ValueKind == JsonValueKind.True)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Fetch all vehicles from API
     /// </summary>
     private async Task<List<Vehicle>> FetchAllVehiclesAsync(HttpClient httpClient)
@@ -113,12 +166,15 @@ public class UEXVehicleCacheInitializerService : IHostedService
             var vehicles = new List<Vehicle>();
             foreach (var vehicleElement in dataArray.EnumerateArray())
             {
+                // Derive vehicle type from boolean flags
+                var vehicleType = DeriveVehicleType(vehicleElement);
+
                 var vehicle = new Vehicle
                 {
                     Id = vehicleElement.TryGetProperty("id", out var id) ? id.GetInt32() : 0,
                     Name = vehicleElement.TryGetProperty("name", out var name) ? name.GetString() ?? "Unknown" : "Unknown",
-                    Type = vehicleElement.TryGetProperty("vehicle_type", out var type) ? type.GetString() ?? "Unknown" : "Unknown",
-                    Manufacturer = vehicleElement.TryGetProperty("manufacturer_name", out var mfg) ? mfg.GetString() ?? "" : ""
+                    Type = vehicleType,
+                    Manufacturer = vehicleElement.TryGetProperty("company_name", out var mfg) ? mfg.GetString() ?? "" : ""
                 };
                 vehicles.Add(vehicle);
             }
