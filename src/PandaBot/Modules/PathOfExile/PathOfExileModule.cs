@@ -1,4 +1,5 @@
 using Discord;
+using Discord.Commands;
 using Discord.Interactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -6,7 +7,8 @@ using PandaBot.Services.PathOfExile;
 
 namespace PandaBot.Modules.PathOfExile;
 
-[Group("pathofexile", "Path of Exile commands")]
+[Discord.Interactions.Group("pathofexile", "Path of Exile commands")]
+[Discord.Commands.Alias("poe")]
 public class PathOfExileModule : InteractionModuleBase<SocketInteractionContext>
 {
     public IServiceProvider Services { get; set; } = null!;
