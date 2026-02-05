@@ -71,6 +71,7 @@ public static class ServiceCollectionExtensions
         if (gameModulesConfig.EnableStarCitizen)
         {
             services.AddHttpClient<PandaBot.Services.StarCitizen.StarCitizenStatusService>();
+            services.AddHttpClient<PandaBot.Services.StarCitizen.UEXCommodityService>();
         }
 
         // Register Path of Exile services (if enabled)
