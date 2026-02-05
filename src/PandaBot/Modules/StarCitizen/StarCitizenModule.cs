@@ -7,8 +7,7 @@ using PandaBot.Services.StarCitizen;
 
 namespace PandaBot.Modules.StarCitizen;
 
-[Discord.Interactions.Group("starcitizen", "Star Citizen commands")]
-[Discord.Commands.Alias("sc")]
+[Discord.Interactions.Group("sc", "Star Citizen commands")]
 public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
 {
     public IServiceProvider Services { get; set; } = null!;

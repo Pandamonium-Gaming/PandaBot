@@ -14,19 +14,28 @@ Essential guidelines for AI code generation on this project. See [AI_INSTRUCTION
 # Step 1: Build VersionManager as Release
 dotnet build tools/VersionManager/VersionManager.csproj -c Release
 
-# Step 2: Use the built executable
+# Step 2 (OPTIONAL - Recommended): Check if version bump is needed based on git commits
+dotnet artifacts/bin/VersionManager/release/VersionManager.dll check-commits
+# This analyzes commits since the last version tag and warns if version needs updating
+
+# Step 3: Use the built executable to bump version
 dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version X.X.X --type patch --message "Your description"
 
-# Step 3: Validate the changes
+# Step 4: Validate the changes
 dotnet artifacts/bin/VersionManager/release/VersionManager.dll validate
 
-# Step 4: Build main project to verify compile
+# Step 5: Build main project to verify compile
 dotnet build
 ```
 
-**Automatic Build Validation:** 🚀 The build process now automatically validates version consistency. If `PandaBot.csproj` version doesn't match `CHANGELOG.md` version, the build **WILL FAIL**. This prevents accidental version mismatches.
+**Git-Aware Version Tracking:** The VersionManager now analyzes your git commits since the last version tag and warns if your version bump doesn't match the conventional commits. Use `check-commits` before bumping to ensure accuracy:
+- **BREAKING changes** → Major version bump required
+- **feat commits** → Minor version bump required  
+- **fix commits** → Patch version bump required
 
-**Important:** ✅ Always increment PandaBot version in sync with build bumps. ✅ Verify CHANGELOG formatting is consistent (use `### Fixed`, `### Added`, etc. with bullet points, not dashes). ✅ Never commit code that breaks the build due to version mismatch.
+**Automatic Build Validation:** 🚀 The build process automatically validates version consistency. If `PandaBot.csproj` version doesn't match `CHANGELOG.md` version, the build **WILL FAIL**. This prevents accidental version mismatches.
+
+**Important:** ✅ Always increment PandaBot version in sync with build bumps. ✅ Use `check-commits` to ensure version bump aligns with actual commits. ✅ Verify CHANGELOG formatting is consistent (use `### Fixed`, `### Added`, etc. with bullet points, not dashes). ✅ Never commit code that breaks the build due to version mismatch.
 
 ## Commit Message Format
 

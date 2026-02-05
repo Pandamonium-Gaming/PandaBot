@@ -8,7 +8,7 @@ using PandaBot.Services.AshesOfCreation;
 
 namespace PandaBot.Modules.AshesOfCreation;
 
-[Group("ashes", "Ashes of Creation commands")]
+[Group("aoc", "Ashes of Creation commands")]
 public class AshesModule : InteractionModuleBase<SocketInteractionContext>
 {
     public IServiceProvider Services { get; set; } = null!;

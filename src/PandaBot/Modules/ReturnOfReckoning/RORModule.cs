@@ -10,8 +10,7 @@ namespace PandaBot.Modules.ReturnOfReckoning;
 /// <summary>
 /// Discord commands for Return of Reckoning server status
 /// </summary>
-[Discord.Interactions.Group("returnofreckoning", "Return of Reckoning commands")]
-[Discord.Commands.Alias("ror")]
+[Discord.Interactions.Group("ror", "Return of Reckoning commands")]
 public class RORModule : InteractionModuleBase<SocketInteractionContext>
 {
     public IServiceProvider Services { get; set; } = null!;

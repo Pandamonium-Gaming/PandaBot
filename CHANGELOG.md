@@ -2,6 +2,12 @@
 
 
 
+
+## [1.2.4] - 2026-02-05
+
+### PATCH
+
+- chore: change ashes command to aoc and adopt short command names across modules
 ## [1.2.3] - 2026-02-05
 
 ### PATCH
