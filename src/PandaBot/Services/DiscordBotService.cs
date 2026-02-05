@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Discord.Interactions;
 using DiscordBot.Models;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace DiscordBot.Services;
 
@@ -52,21 +53,31 @@ public class DiscordBotService
         {
             _logger.LogInformation("Loading Discord modules...");
             
+            // Get all module types first to see what we're loading
+            var moduleTypes = typeof(Program).Assembly.GetTypes()
+                .Where(t => t.IsClass && !t.IsAbstract && t.BaseType?.Name == "InteractionModuleBase`1")
+                .ToList();
+            _logger.LogInformation("Found {ModuleCount} interaction modules: {Modules}", 
+                moduleTypes.Count, string.Join(", ", moduleTypes.Select(t => t.Name)));
+            
             // Add timeout to module loading to prevent hanging
             var moduleLoadingTask = _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
             var completedTask = await Task.WhenAny(moduleLoadingTask, Task.Delay(TimeSpan.FromSeconds(30)));
             
             if (completedTask != moduleLoadingTask)
             {
-                _logger.LogError("Module loading timed out after 30 seconds");
+                _logger.LogError("Module loading timed out after 30 seconds. Modules found: {Modules}", 
+                    string.Join(", ", moduleTypes.Select(t => t.Name)));
                 throw new TimeoutException("Discord module loading exceeded 30 second timeout");
             }
             
-            _logger.LogInformation("Modules loaded successfully");
+            var loadedModuleCount = await moduleLoadingTask;
+            _logger.LogInformation("Modules loaded successfully. Loaded {LoadedCount} modules", loadedModuleCount);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load Discord modules. This may indicate a missing dependency or configuration issue. Details: {Message}", ex.Message);
+            _logger.LogError("Inner exception: {InnerMessage}", ex.InnerException?.Message);
             throw;
         }
 
