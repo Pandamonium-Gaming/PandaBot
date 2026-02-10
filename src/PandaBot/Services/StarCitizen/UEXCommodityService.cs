@@ -62,24 +62,49 @@ public class UEXCommodityService
                 .WithThumbnailUrl(UexBadgeUrl);
 
             // Add price summary fields
-            embed.AddField("💰 Lowest Price", 
-                $"{summary.LowestPrice:F2} aUEC @ {summary.CheapestLocation}", 
-                inline: false);
-            
-            embed.AddField("📈 Highest Price", 
-                $"{summary.HighestPrice:F2} aUEC @ {summary.MostExpensiveLocation}", 
-                inline: false);
+            var validPrices = commodity.Prices.Where(p => p.BuyPrice > 0 || p.SellPrice > 0).ToList();
+            if (validPrices.Any())
+            {
+                var buyPrices = validPrices.Where(p => p.BuyPrice > 0).ToList();
+                var sellPrices = validPrices.Where(p => p.SellPrice > 0).ToList();
+                
+                if (buyPrices.Any())
+                {
+                    embed.AddField("💰 Lowest Price", 
+                        $"{buyPrices.Min(p => p.BuyPrice):F2} aUEC", 
+                        inline: true);
+                }
+                
+                if (sellPrices.Any())
+                {
+                    embed.AddField("📈 Highest Price", 
+                        $"{sellPrices.Max(p => p.SellPrice):F2} aUEC", 
+                        inline: true);
+                }
+            }
 
             embed.AddField("📍 Locations", 
                 $"{summary.LocationCount} locations tracked", 
                 inline: true);
 
-            embed.AddField("💹 Price Spread", 
-                $"{((summary.HighestPrice - summary.LowestPrice) / summary.LowestPrice * 100):F1}%", 
-                inline: true);
+            if (validPrices.Any())
+            {
+                var buyPrices = validPrices.Where(p => p.BuyPrice > 0).ToList();
+                var sellPrices = validPrices.Where(p => p.SellPrice > 0).ToList();
+                
+                if (buyPrices.Any() && sellPrices.Any())
+                {
+                    var minBuy = buyPrices.Min(p => p.BuyPrice);
+                    var maxSell = sellPrices.Max(p => p.SellPrice);
+                    embed.AddField("💹 Price Spread", 
+                        $"{((maxSell - minBuy) / minBuy * 100):F1}%", 
+                        inline: true);
+                }
+            }
 
             // Add top 5 cheapest locations
             var cheapest = commodity.Prices
+                .Where(p => p.BuyPrice > 0)
                 .OrderBy(p => p.BuyPrice)
                 .Take(5)
                 .ToList();
@@ -87,12 +112,13 @@ public class UEXCommodityService
             if (cheapest.Any())
             {
                 var cheapestText = string.Join("\n", 
-                    cheapest.Select(p => $"• {p.LocationName} ({p.TerminalCode}): {p.BuyPrice:F2} aUEC"));
+                    cheapest.Select(p => $"• ({p.TerminalCode}): {p.BuyPrice:F2} aUEC"));
                 embed.AddField("✅ Cheapest 5 Locations", cheapestText, inline: false);
             }
 
             // Add top 5 most expensive locations
             var expensive = commodity.Prices
+                .Where(p => p.SellPrice > 0)
                 .OrderByDescending(p => p.SellPrice)
                 .Take(5)
                 .ToList();
@@ -100,7 +126,7 @@ public class UEXCommodityService
             if (expensive.Any())
             {
                 var expensiveText = string.Join("\n", 
-                    expensive.Select(p => $"• {p.LocationName} ({p.TerminalCode}): {p.SellPrice:F2} aUEC"));
+                    expensive.Select(p => $"• ({p.TerminalCode}): {p.SellPrice:F2} aUEC"));
                 embed.AddField("🔴 Most Expensive 5 Locations", expensiveText, inline: false);
             }
 
