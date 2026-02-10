@@ -112,7 +112,7 @@ public class UEXCommodityService
             if (cheapest.Any())
             {
                 var cheapestText = string.Join("\n", 
-                    cheapest.Select(p => $"• {p.TerminalName}: {p.BuyPrice:F2} aUEC"));
+                    cheapest.Select(p => $"• {FormatCommodityLocation(p)}: {p.BuyPrice:F0} aUEC"));
                 embed.AddField("💰 Best Buy Prices (5)", cheapestText, inline: false);
             }
 
@@ -126,7 +126,7 @@ public class UEXCommodityService
             if (expensive.Any())
             {
                 var expensiveText = string.Join("\n", 
-                    expensive.Select(p => $"• {p.TerminalName}: {p.SellPrice:F2} aUEC"));
+                    expensive.Select(p => $"• {FormatCommodityLocation(p)}: {p.SellPrice:F0} aUEC"));
                 embed.AddField("📈 Best Sell Prices (5)", expensiveText, inline: false);
             }
 
@@ -198,7 +198,10 @@ public class UEXCommodityService
                     Id = priceElement.TryGetProperty("id", out var priceId) ? priceId.GetInt32() : 0,
                     TerminalCode = priceElement.TryGetProperty("terminal_code", out var termCode) ? termCode.GetString() ?? "" : "",
                     TerminalName = priceElement.TryGetProperty("terminal_name", out var termName) ? termName.GetString() ?? "" : "",
-                    LocationName = priceElement.TryGetProperty("planet", out var planet) ? planet.GetString() ?? "" : "",
+                    SystemName = priceElement.TryGetProperty("star_system_name", out var sysName) ? sysName.GetString() ?? "" : "",
+                    PlanetName = priceElement.TryGetProperty("planet_name", out var planetName) ? planetName.GetString() ?? "" : "",
+                    CityName = priceElement.TryGetProperty("city_name", out var cityName) ? cityName.GetString() ?? "" : "",
+                    LocationName = priceElement.TryGetProperty("planet_name", out var planet) ? planet.GetString() ?? "" : "",
                     BuyPrice = priceElement.TryGetProperty("price_buy", out var buy) ? (decimal)buy.GetDouble() : 0,
                     SellPrice = priceElement.TryGetProperty("price_sell", out var sell) ? (decimal)sell.GetDouble() : 0,
                     Timestamp = priceElement.TryGetProperty("time_update", out var ts) ? ts.GetString() ?? "" : ""
@@ -248,5 +251,26 @@ public class UEXCommodityService
             LocationCount = commodity.Prices.Count,
             LastUpdated = DateTime.UtcNow
         };
+    }
+
+    /// <summary>
+    /// Format commodity location as "System - City - TerminalCode"
+    /// </summary>
+    private static string FormatCommodityLocation(CommodityPrice price)
+    {
+        var parts = new List<string>();
+        
+        if (!string.IsNullOrWhiteSpace(price.SystemName))
+            parts.Add(price.SystemName);
+        
+        if (!string.IsNullOrWhiteSpace(price.CityName))
+            parts.Add(price.CityName);
+        else if (!string.IsNullOrWhiteSpace(price.PlanetName))
+            parts.Add(price.PlanetName);
+        
+        if (!string.IsNullOrWhiteSpace(price.TerminalCode))
+            parts.Add(price.TerminalCode);
+        
+        return parts.Count > 0 ? string.Join(" - ", parts) : "Unknown";
     }
 }

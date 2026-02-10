@@ -9,6 +9,9 @@ public class CommodityPrice
     public string TerminalCode { get; set; } = string.Empty;
     public string TerminalName { get; set; } = string.Empty;
     public string LocationName { get; set; } = string.Empty;
+    public string SystemName { get; set; } = string.Empty;
+    public string PlanetName { get; set; } = string.Empty;
+    public string CityName { get; set; } = string.Empty;
     public decimal BuyPrice { get; set; }
     public decimal SellPrice { get; set; }
     public string Timestamp { get; set; } = string.Empty;
