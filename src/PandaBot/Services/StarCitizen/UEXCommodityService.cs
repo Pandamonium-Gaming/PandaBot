@@ -102,7 +102,7 @@ public class UEXCommodityService
                 }
             }
 
-            // Add top 5 cheapest locations
+            // Add top 5 best buy prices
             var cheapest = commodity.Prices
                 .Where(p => p.BuyPrice > 0)
                 .OrderBy(p => p.BuyPrice)
@@ -113,10 +113,10 @@ public class UEXCommodityService
             {
                 var cheapestText = string.Join("\n", 
                     cheapest.Select(p => $"• {p.TerminalName}: {p.BuyPrice:F2} aUEC"));
-                embed.AddField("✅ Cheapest 5 Locations", cheapestText, inline: false);
+                embed.AddField("💰 Best Buy Prices (5)", cheapestText, inline: false);
             }
 
-            // Add top 5 most expensive locations
+            // Add top 5 best sell prices
             var expensive = commodity.Prices
                 .Where(p => p.SellPrice > 0)
                 .OrderByDescending(p => p.SellPrice)
@@ -127,7 +127,7 @@ public class UEXCommodityService
             {
                 var expensiveText = string.Join("\n", 
                     expensive.Select(p => $"• {p.TerminalName}: {p.SellPrice:F2} aUEC"));
-                embed.AddField("🔴 Most Expensive 5 Locations", expensiveText, inline: false);
+                embed.AddField("📈 Best Sell Prices (5)", expensiveText, inline: false);
             }
 
             embed.WithFooter($"Last updated: {summary.LastUpdated:yyyy-MM-dd HH:mm} UTC");
