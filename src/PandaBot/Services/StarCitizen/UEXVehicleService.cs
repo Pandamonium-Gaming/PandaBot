@@ -70,7 +70,7 @@ public class UEXVehicleService
 
                     var name = vehicleElement.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
                     var type = vehicleElement.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "";
-                    var manufacturer = vehicleElement.TryGetProperty("manufacturer", out var m) ? m.GetString() ?? "" : "";
+                    var manufacturer = vehicleElement.TryGetProperty("company_name", out var m) ? m.GetString() ?? "" : "";
 
                     if (string.IsNullOrWhiteSpace(name))
                         continue;
