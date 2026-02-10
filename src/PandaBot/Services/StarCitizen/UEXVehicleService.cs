@@ -330,20 +330,40 @@ public class UEXVehicleService
 
             if (buyPrices.Any())
             {
-                var cheapest = buyPrices.OrderBy(p => p.BuyPrice).First();
-                var avgBuy = buyPrices.Average(p => p.BuyPrice);
-                embed.AddField("💰 Cheapest Buy Price",
-                    $"{cheapest.BuyPrice:F2} aUEC @ {cheapest.LocationName}\nAvg: {avgBuy:F2} aUEC",
-                    inline: false);
+                var topBuyPrices = buyPrices
+                    .Where(p => p.BuyPrice > 0)
+                    .OrderBy(p => p.BuyPrice)
+                    .Take(5)
+                    .ToList();
+
+                if (topBuyPrices.Any())
+                {
+                    var avgBuy = topBuyPrices.Average(p => p.BuyPrice);
+                    var priceList = string.Join("\n", 
+                        topBuyPrices.Select(p => $"• {p.BuyPrice:F0} aUEC @ {p.LocationName}"));
+                    embed.AddField("💰 Best Buy Prices (Top 5)",
+                        $"{priceList}\nAvg: {avgBuy:F0} aUEC",
+                        inline: false);
+                }
             }
 
             if (sellPrices.Any())
             {
-                var highest = sellPrices.OrderByDescending(p => p.SellPrice).First();
-                var avgSell = sellPrices.Average(p => p.SellPrice);
-                embed.AddField("📈 Best Sell Price",
-                    $"{highest.SellPrice:F2} aUEC @ {highest.LocationName}\nAvg: {avgSell:F2} aUEC",
-                    inline: false);
+                var topSellPrices = sellPrices
+                    .Where(p => p.SellPrice > 0)
+                    .OrderByDescending(p => p.SellPrice)
+                    .Take(5)
+                    .ToList();
+
+                if (topSellPrices.Any())
+                {
+                    var avgSell = topSellPrices.Average(p => p.SellPrice);
+                    var priceList = string.Join("\n",
+                        topSellPrices.Select(p => $"• {p.SellPrice:F0} aUEC @ {p.LocationName}"));
+                    embed.AddField("📈 Best Sell Prices (Top 5)",
+                        $"{priceList}\nAvg: {avgSell:F0} aUEC",
+                        inline: false);
+                }
             }
 
             // Enrich location information
@@ -378,10 +398,21 @@ public class UEXVehicleService
 
             if (purchasePrices.Any())
             {
-                var cheapestPurchase = purchasePrices.OrderBy(p => p.PriceBuy).First();
-                embed.AddField("🛒 Purchase Price",
-                    $"{cheapestPurchase.PriceBuy:F0} aUEC @ {FormatLocation(cheapestPurchase)}",
-                    inline: false);
+                var topPurchasePrices = purchasePrices
+                    .Where(p => p.PriceBuy > 0)
+                    .OrderBy(p => p.PriceBuy)
+                    .Take(5)
+                    .ToList();
+
+                if (topPurchasePrices.Any())
+                {
+                    var avgPurchase = topPurchasePrices.Average(p => p.PriceBuy);
+                    var priceList = string.Join("\n",
+                        topPurchasePrices.Select(p => $"• {p.PriceBuy:F0} aUEC @ {FormatLocation(p)}"));
+                    embed.AddField("🛒 Best Purchase Prices (Top 5)",
+                        $"{priceList}\nAvg: {avgPurchase:F0} aUEC",
+                        inline: false);
+                }
 
                 var purchaseLocations = purchasePrices
                     .Select(FormatLocation)
@@ -396,10 +427,21 @@ public class UEXVehicleService
 
             if (rentalPrices.Any())
             {
-                var cheapestRental = rentalPrices.OrderBy(p => p.PriceRent).First();
-                embed.AddField("🛠️ Rental Price",
-                    $"{cheapestRental.PriceRent:F0} aUEC @ {FormatLocation(cheapestRental)}",
-                    inline: false);
+                var topRentalPrices = rentalPrices
+                    .Where(p => p.PriceRent > 0)
+                    .OrderBy(p => p.PriceRent)
+                    .Take(5)
+                    .ToList();
+
+                if (topRentalPrices.Any())
+                {
+                    var avgRental = topRentalPrices.Average(p => p.PriceRent);
+                    var priceList = string.Join("\n",
+                        topRentalPrices.Select(p => $"• {p.PriceRent:F0} aUEC @ {FormatLocation(p)}"));
+                    embed.AddField("🛠️ Best Rental Prices (Top 5)",
+                        $"{priceList}\nAvg: {avgRental:F0} aUEC",
+                        inline: false);
+                }
 
                 var rentalLocations = rentalPrices
                     .Select(FormatLocation)
