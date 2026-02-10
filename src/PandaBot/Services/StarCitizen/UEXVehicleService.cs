@@ -30,6 +30,107 @@ public class UEXVehicleService
     }
 
     /// <summary>
+    /// Refresh vehicle cache by fetching all vehicles from UEX API
+    /// </summary>
+    public async Task<bool> RefreshVehicleCacheAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Starting vehicle cache refresh from UEX API");
+            var startTime = DateTime.UtcNow;
+
+            var response = await _httpClient.GetAsync(VehiclesEndpoint);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to fetch vehicles from UEX API: {StatusCode}", response.StatusCode);
+                return false;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(content);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("data", out var dataArray) || dataArray.ValueKind != JsonValueKind.Array)
+            {
+                _logger.LogError("Invalid response format from UEX API: missing or invalid 'data' array");
+                return false;
+            }
+
+            var vehicleCount = 0;
+            var updatedCount = 0;
+            var createdCount = 0;
+
+            foreach (var vehicleElement in dataArray.EnumerateArray())
+            {
+                try
+                {
+                    var vehicleId = vehicleElement.TryGetProperty("id", out var id) && id.TryGetInt32(out var idVal) ? idVal : 0;
+                    if (vehicleId == 0)
+                        continue;
+
+                    var name = vehicleElement.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                    var type = vehicleElement.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "";
+                    var manufacturer = vehicleElement.TryGetProperty("manufacturer", out var m) ? m.GetString() ?? "" : "";
+
+                    if (string.IsNullOrWhiteSpace(name))
+                        continue;
+
+                    var existingCache = await _dbContext.UexVehicleCache
+                        .FirstOrDefaultAsync(v => v.UexVehicleId == vehicleId);
+
+                    if (existingCache != null)
+                    {
+                        existingCache.Name = name;
+                        existingCache.Type = type;
+                        existingCache.Manufacturer = manufacturer;
+                        existingCache.CachedAt = DateTime.UtcNow;
+                        _dbContext.UexVehicleCache.Update(existingCache);
+                        updatedCount++;
+                    }
+                    else
+                    {
+                        var cacheEntry = new VehicleCache
+                        {
+                            UexVehicleId = vehicleId,
+                            Name = name,
+                            Type = type,
+                            Manufacturer = manufacturer,
+                            CachedAt = DateTime.UtcNow
+                        };
+                        _dbContext.UexVehicleCache.Add(cacheEntry);
+                        createdCount++;
+                    }
+
+                    vehicleCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error processing individual vehicle from API response");
+                }
+            }
+
+            if (vehicleCount > 0)
+            {
+                await _dbContext.SaveChangesAsync();
+                var elapsed = DateTime.UtcNow - startTime;
+                _logger.LogInformation("Vehicle cache refresh completed: {TotalCount} vehicles processed ({CreatedCount} created, {UpdatedCount} updated) in {ElapsedSeconds:F2}s",
+                    vehicleCount, createdCount, updatedCount, elapsed.TotalSeconds);
+                return true;
+            }
+            else
+            {
+                _logger.LogWarning("No vehicles found in API response");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing vehicle cache from UEX API");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Search vehicles by name with fuzzy matching
     /// </summary>
     public async Task<List<VehicleCache>> SearchVehiclesByNameFuzzyAsync(string searchTerm, int maxResults = 10)

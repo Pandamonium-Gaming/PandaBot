@@ -63,6 +63,29 @@ try
     }
     Log.Information("Database migrations completed");
 
+    Log.Information("Initializing UEX vehicle cache...");
+    using (var scope = host.Services.CreateScope())
+    {
+        try
+        {
+            var uexService = scope.ServiceProvider.GetRequiredService<PandaBot.Services.StarCitizen.UEXVehicleService>();
+            var cacheRefreshSuccess = await uexService.RefreshVehicleCacheAsync();
+            if (cacheRefreshSuccess)
+            {
+                Log.Information("UEX vehicle cache initialized successfully");
+            }
+            else
+            {
+                Log.Warning("UEX vehicle cache initialization had issues, continuing startup");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to initialize UEX vehicle cache, continuing startup");
+        }
+    }
+    Log.Information("Vehicle cache initialization completed");
+
     Log.Information("Getting DiscordBotService from DI container...");
     var botService = host.Services.GetRequiredService<DiscordBotService>();
     Log.Information("DiscordBotService retrieved successfully");
