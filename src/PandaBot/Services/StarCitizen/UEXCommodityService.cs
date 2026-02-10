@@ -112,7 +112,7 @@ public class UEXCommodityService
             if (cheapest.Any())
             {
                 var cheapestText = string.Join("\n", 
-                    cheapest.Select(p => $"• ({p.TerminalCode}): {p.BuyPrice:F2} aUEC"));
+                    cheapest.Select(p => $"• {p.TerminalName}: {p.BuyPrice:F2} aUEC"));
                 embed.AddField("✅ Cheapest 5 Locations", cheapestText, inline: false);
             }
 
@@ -126,7 +126,7 @@ public class UEXCommodityService
             if (expensive.Any())
             {
                 var expensiveText = string.Join("\n", 
-                    expensive.Select(p => $"• ({p.TerminalCode}): {p.SellPrice:F2} aUEC"));
+                    expensive.Select(p => $"• {p.TerminalName}: {p.SellPrice:F2} aUEC"));
                 embed.AddField("🔴 Most Expensive 5 Locations", expensiveText, inline: false);
             }
 
