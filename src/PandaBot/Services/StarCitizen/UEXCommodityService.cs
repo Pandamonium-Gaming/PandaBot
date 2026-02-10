@@ -254,7 +254,7 @@ public class UEXCommodityService
     }
 
     /// <summary>
-    /// Format commodity location as "System - City - TerminalCode"
+    /// Format commodity location as "System - City - TerminalName"
     /// </summary>
     private static string FormatCommodityLocation(CommodityPrice price)
     {
@@ -268,8 +268,8 @@ public class UEXCommodityService
         else if (!string.IsNullOrWhiteSpace(price.PlanetName))
             parts.Add(price.PlanetName);
         
-        if (!string.IsNullOrWhiteSpace(price.TerminalCode))
-            parts.Add(price.TerminalCode);
+        if (!string.IsNullOrWhiteSpace(price.TerminalName))
+            parts.Add(price.TerminalName);
         
         return parts.Count > 0 ? string.Join(" - ", parts) : "Unknown";
     }
