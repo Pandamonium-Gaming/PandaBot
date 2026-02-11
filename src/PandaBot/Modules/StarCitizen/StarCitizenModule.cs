@@ -417,13 +417,25 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
                     .WithDescription($"**{timeInfo.LocalTimeFormatted}** ({timeInfo.IlluminationStatus})")
                     .AddField("Date", $"📅 {timeInfo.InGameDateString}", inline: false)
                     .AddField("Parent Body", timeInfo.ParentBody, inline: true)
-                    .AddField("Parent Star", timeInfo.ParentStar, inline: true)
-                    .WithColor(GetIlluminationColor(timeInfo.IlluminationStatus))
-                    .WithFooter($"Data from VerseTime • Time calculated at {DateTime.UtcNow:HH:mm:ss} UTC")
-                    .WithCurrentTimestamp()
-                    .Build();
+                    .AddField("Parent Star", timeInfo.ParentStar, inline: true);
                 
-                await FollowupAsync(embed: embed);
+                // Add sunrise/sunset if available
+                if (timeInfo.NextStarRise.HasValue)
+                {
+                    var sunriseTime = TimeSpan.FromMinutes(timeInfo.NextStarRise.Value);
+                    embed.AddField("Next Sunrise", $"🌅 In {sunriseTime.Hours}h {sunriseTime.Minutes}m", inline: true);
+                }
+                if (timeInfo.NextStarSet.HasValue)
+                {
+                    var sunsetTime = TimeSpan.FromMinutes(timeInfo.NextStarSet.Value);
+                    embed.AddField("Next Sunset", $"🌅 In {sunsetTime.Hours}h {sunsetTime.Minutes}m", inline: true);
+                }
+                
+                embed.WithColor(GetIlluminationColor(timeInfo.IlluminationStatus))
+                    .WithFooter($"Data from VerseTime • Time calculated at {DateTime.UtcNow:HH:mm:ss} UTC")
+                    .WithCurrentTimestamp();
+                
+                await FollowupAsync(embed: embed.Build());
             }
             else
             {
@@ -512,13 +524,25 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
                 .WithDescription($"**{timeInfo.LocalTimeFormatted}** ({timeInfo.IlluminationStatus})")
                 .AddField("Date", $"📅 {timeInfo.InGameDateString}", inline: false)
                 .AddField("Parent Body", timeInfo.ParentBody, inline: true)
-                .AddField("Parent Star", timeInfo.ParentStar, inline: true)
-                .WithColor(GetIlluminationColor(timeInfo.IlluminationStatus))
+                .AddField("Parent Star", timeInfo.ParentStar, inline: true);
+            
+            // Add sunrise/sunset if available
+            if (timeInfo.NextStarRise.HasValue)
+            {
+                var sunriseTime = TimeSpan.FromMinutes(timeInfo.NextStarRise.Value);
+                embed.AddField("Next Sunrise", $"🌅 In {sunriseTime.Hours}h {sunriseTime.Minutes}m", inline: true);
+            }
+            if (timeInfo.NextStarSet.HasValue)
+            {
+                var sunsetTime = TimeSpan.FromMinutes(timeInfo.NextStarSet.Value);
+                embed.AddField("Next Sunset", $"🌅 In {sunsetTime.Hours}h {sunsetTime.Minutes}m", inline: true);
+            }
+            
+            embed.WithColor(GetIlluminationColor(timeInfo.IlluminationStatus))
                 .WithFooter($"Data from VerseTime • Time calculated at {DateTime.UtcNow:HH:mm:ss} UTC")
-                .WithCurrentTimestamp()
-                .Build();
+                .WithCurrentTimestamp();
 
-            await FollowupAsync(embed: embed);
+            await FollowupAsync(embed: embed.Build());
 
             // Delete the original selection message
             try

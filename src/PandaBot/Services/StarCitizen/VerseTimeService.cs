@@ -290,7 +290,10 @@ public class VerseTimeService
         // Calculate in-game date
         var inGameDate = CalculateInGameDate(universeTimeSeconds);
         
-        return new Models.StarCitizen.LocationTimeInfo
+        // Calculate sunrise/sunset times based on latitude and location
+        var (nextSunriseSeconds, nextSunsetSeconds) = CalculateSunriseSunset(localTimeSeconds, location.Latitude);
+        
+        var timeInfo = new Models.StarCitizen.LocationTimeInfo
         {
             LocationName = location.Name,
             ParentBody = location.ParentBody,
@@ -300,10 +303,62 @@ public class VerseTimeService
             IlluminationStatus = status,
             InGameDateFormatted = inGameDate.Item1,
             InGameDateString = inGameDate.Item2,
-            // Note: Full astronomical calculations for rise/set times would require
-            // implementing the complete VerseTime algorithm (declination, rise/set angles, etc.)
-            // For now, we provide basic information
         };
+        
+        // Add sunrise/sunset times if available
+        if (nextSunriseSeconds.HasValue)
+        {
+            timeInfo.NextStarRise = (nextSunriseSeconds.Value - localTimeSeconds) / 60.0; // Convert to minutes
+            if (timeInfo.NextStarRise < 0)
+                timeInfo.NextStarRise += (86400.0 / 60.0); // Add a full day if negative
+            
+            var sunriseTime = TimeSpan.FromSeconds(nextSunriseSeconds.Value);
+            var sunriseFraction = (nextSunriseSeconds.Value / 86400.0);
+            timeInfo.LocalStarRiseTime = sunriseFraction;
+        }
+        
+        if (nextSunsetSeconds.HasValue)
+        {
+            timeInfo.NextStarSet = (nextSunsetSeconds.Value - localTimeSeconds) / 60.0; // Convert to minutes
+            if (timeInfo.NextStarSet < 0)
+                timeInfo.NextStarSet += (86400.0 / 60.0); // Add a full day if negative
+            
+            var sunsetFraction = (nextSunsetSeconds.Value / 86400.0);
+            timeInfo.LocalStarSetTime = sunsetFraction;
+        }
+        
+        return timeInfo;
+    }
+    
+    private (double? sunrise, double? sunset) CalculateSunriseSunset(double currentLocalTimeSeconds, double latitude)
+    {
+        // Simple approximation based on latitude
+        // At equator: sunrise ~6:00 (21600s), sunset ~18:00 (64800s)
+        // Higher latitude = longer day in summer, shorter in winter
+        
+        // For Star Citizen, use latitude to estimate day length
+        double latitudeEffect = Math.Abs(latitude) / 90.0; // 0 at equator, 1 at poles
+        
+        // At equator: 12 hour day (43200s), at poles: varies more
+        // Simplified: assume 12 hour day adjusted by latitude
+        double dayLengthSeconds = 43200.0 - (latitudeEffect * 14400.0); // 12 hours base
+        dayLengthSeconds = Math.Max(dayLengthSeconds, 7200.0); // Minimum 2 hours
+        dayLengthSeconds = Math.Min(dayLengthSeconds, 79200.0); // Maximum 22 hours
+        
+        // Calculate rise/set times
+        double noonSeconds = 43200.0;
+        
+        // Sunrise is before noon, sunset is after noon
+        double sunriseSeconds = noonSeconds - (dayLengthSeconds / 2.0);
+        double sunsetSeconds = noonSeconds + (dayLengthSeconds / 2.0);
+        
+        // Adjust for wraparound
+        if (sunriseSeconds < 0)
+            sunriseSeconds += 86400.0;
+        if (sunsetSeconds >= 86400.0)
+            sunsetSeconds -= 86400.0;
+        
+        return (sunriseSeconds, sunsetSeconds);
     }
 
     private (string formatted, string dateString) CalculateInGameDate(double universeTimeSeconds)
