@@ -73,13 +73,14 @@ public static class ServiceCollectionExtensions
             // Bind UEX API configuration
             services.Configure<UEXConfig>(configuration.GetSection("UEX"));
             
-            // Add memory cache for UEX item/price caching
+            // Add memory cache for UEX item/price caching and VerseTime location caching
             services.AddMemoryCache();
 
             services.AddHttpClient<PandaBot.Services.StarCitizen.StarCitizenStatusService>();
             services.AddHttpClient<PandaBot.Services.StarCitizen.UEXCommodityService>();
             services.AddHttpClient<PandaBot.Services.StarCitizen.UEXItemService>();
             services.AddHttpClient<PandaBot.Services.StarCitizen.UEXVehicleService>();
+            services.AddHttpClient<PandaBot.Services.StarCitizen.VerseTimeService>();
 
             // Register hosted services to initialize caches on startup
             services.AddHostedService<PandaBot.Services.StarCitizen.UEXItemCacheInitializerService>();

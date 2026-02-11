@@ -378,4 +378,90 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             await FollowupAsync($"❌ Error fetching vehicle data: {ex.Message}", ephemeral: false);
         }
     }
+
+    [SlashCommand("time", "Get local time for a Star Citizen location")]
+    public async Task TimeCommand(
+        [Discord.Interactions.Summary("location", "The name of the location (e.g., Lorville, Area18, New Babbage)")] string locationName)
+    {
+        await DeferAsync();
+
+        var logger = Services.GetRequiredService<ILogger<StarCitizenModule>>();
+        logger.LogInformation("User {UserId} checking time for location: {Location}", Context.User.Id, locationName);
+
+        try
+        {
+            var verseTimeService = Services.GetRequiredService<VerseTimeService>();
+            
+            // Search for the location
+            var locations = await verseTimeService.SearchLocationsAsync(locationName, maxResults: 5);
+            
+            if (locations.Count == 0)
+            {
+                await FollowupAsync($"❌ No locations found matching '{locationName}'. Try searching for landing zones like 'Lorville', 'Area18', or 'New Babbage'.");
+                return;
+            }
+            
+            // If exact match or single result, show time directly
+            if (locations.Count == 1 || locations[0].Name.Equals(locationName, StringComparison.OrdinalIgnoreCase))
+            {
+                var timeInfo = await verseTimeService.GetLocationTimeAsync(locations[0].Name);
+                
+                if (timeInfo == null)
+                {
+                    await FollowupAsync($"❌ Failed to calculate time for {locations[0].Name}. The parent celestial body data may be unavailable.");
+                    return;
+                }
+                
+                var embed = new EmbedBuilder()
+                    .WithTitle($"🕐 Local Time - {timeInfo.LocationName}")
+                    .WithDescription($"**{timeInfo.LocalTimeFormatted}** ({timeInfo.IlluminationStatus})")
+                    .AddField("Parent Body", timeInfo.ParentBody, inline: true)
+                    .AddField("Parent Star", timeInfo.ParentStar, inline: true)
+                    .WithColor(GetIlluminationColor(timeInfo.IlluminationStatus))
+                    .WithFooter($"Data from VerseTime • Time calculated at {DateTime.UtcNow:HH:mm:ss} UTC")
+                    .WithCurrentTimestamp()
+                    .Build();
+                
+                await FollowupAsync(embed: embed);
+            }
+            else
+            {
+                // Multiple results - show selection menu
+                var description = "**Multiple locations found:**\n\n";
+                for (int i = 0; i < Math.Min(5, locations.Count); i++)
+                {
+                    description += $"{i + 1}. **{locations[i].Name}** ({locations[i].Type}) - {locations[i].ParentBody}\n";
+                }
+                description += $"\nPlease be more specific or use an exact location name.";
+                
+                var embed = new EmbedBuilder()
+                    .WithTitle("🔍 Location Search Results")
+                    .WithDescription(description)
+                    .WithColor(Discord.Color.Blue)
+                    .Build();
+                
+                await FollowupAsync(embed: embed);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching location time");
+            await FollowupAsync($"❌ Error fetching location time: {ex.Message}");
+        }
+    }
+
+    private static Discord.Color GetIlluminationColor(string status)
+    {
+        return status switch
+        {
+            "Midnight" or "Night" => new Discord.Color(25, 25, 112), // Midnight blue
+            "Morning Twilight" => new Discord.Color(135, 206, 250), // Light sky blue
+            "Morning" or "Late Morning" => new Discord.Color(255, 215, 0), // Gold
+            "Noon" => new Discord.Color(255, 255, 0), // Bright yellow
+            "Afternoon" => new Discord.Color(255, 165, 0), // Orange
+            "Evening" => new Discord.Color(255, 140, 0), // Dark orange
+            "Evening Twilight" => new Discord.Color(70, 130, 180), // Steel blue
+            _ => Discord.Color.DarkGrey
+        };
+    }
 }

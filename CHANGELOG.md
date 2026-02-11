@@ -5,6 +5,12 @@
 
 
 
+
+## [1.4.0] - 2026-02-11
+
+### MINOR
+
+- Add /sc time command to show Star Citizen local times using VerseTime data
 ## [1.3.1] - 2026-02-11
 
 ### PATCH
