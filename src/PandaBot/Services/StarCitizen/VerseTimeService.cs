@@ -287,6 +287,9 @@ public class VerseTimeService
         // Determine illumination status (simplified)
         string status = DetermineIlluminationStatus(localTimeSeconds);
         
+        // Calculate in-game date
+        var inGameDate = CalculateInGameDate(universeTimeSeconds);
+        
         return new Models.StarCitizen.LocationTimeInfo
         {
             LocationName = location.Name,
@@ -295,10 +298,33 @@ public class VerseTimeService
             LocalTime = localTimeSeconds,
             LocalTimeFormatted = formatted,
             IlluminationStatus = status,
+            InGameDateFormatted = inGameDate.Item1,
+            InGameDateString = inGameDate.Item2,
             // Note: Full astronomical calculations for rise/set times would require
             // implementing the complete VerseTime algorithm (declination, rise/set angles, etc.)
             // For now, we provide basic information
         };
+    }
+
+    private (string formatted, string dateString) CalculateInGameDate(double universeTimeSeconds)
+    {
+        // Convert seconds to days since epoch (2020-01-01)
+        double daysSinceEpoch = universeTimeSeconds / 86400.0;
+        
+        // Reference date: 2020-01-01 00:00:00
+        var referenceDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var calculatedDate = referenceDate.AddDays(daysSinceEpoch);
+        
+        // Star Citizen year reference: 2954 corresponds to their in-game calendar
+        // Approximate: 2020 real year = 2954 in-game year (this is a simplified approximation)
+        // In reality, SC has its own calendar system, but using real-world dates shifted
+        int yearOffset = 2954 - 2020;
+        int inGameYear = calculatedDate.Year + yearOffset;
+        
+        string formatted = calculatedDate.ToString("yyyy-MM-dd");
+        string dateString = $"{inGameYear:D4}-{calculatedDate.Month:D2}-{calculatedDate.Day:D2}";
+        
+        return (formatted, dateString);
     }
 
     private string DetermineIlluminationStatus(double localTimeSeconds)
@@ -409,11 +435,8 @@ public class VerseTimeService
                 return 4000;
         }
         
-        // Levenshtein distance for fuzzy matching - very strict to avoid partial matches
-        // For typed numbers like "area18", prevent matching "area11" (both Levenshtein distance 2)
-        int distance = CalculateLevenshteinDistance(normalizedSearch, normalizedTarget);
-        if (distance == 1) // Only allow single character typos
-            return 3000 - 500;
+        // No fuzzy Levenshtein matching - locations should match exactly or not at all
+        // This prevents "Area18" from matching "Area11" or "Area17"
         
         // Sequential character matching (original algorithm for very loose matches)
         int matches = 0;

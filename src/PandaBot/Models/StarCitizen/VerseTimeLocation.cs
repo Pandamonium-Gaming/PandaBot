@@ -124,4 +124,14 @@ public class LocationTimeInfo
     /// Real-world time for next sunset
     /// </summary>
     public DateTime? NextSunsetRealTime { get; set; }
+    
+    /// <summary>
+    /// Current in-game date formatted (YYYY-MM-DD)
+    /// </summary>
+    public string InGameDateFormatted { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Star Citizen specific date string
+    /// </summary>
+    public string InGameDateString { get; set; } = string.Empty;
 }
