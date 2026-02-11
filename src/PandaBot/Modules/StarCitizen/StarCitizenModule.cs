@@ -422,13 +422,19 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
                 // Add sunrise/sunset if available
                 if (timeInfo.NextStarRise.HasValue)
                 {
-                    var sunriseTime = TimeSpan.FromMinutes(timeInfo.NextStarRise.Value);
-                    embed.AddField("Next Sunrise", $"🌅 In {sunriseTime.Hours}h {sunriseTime.Minutes}m", inline: true);
+                    var realWorldMinutes = timeInfo.NextStarRise.Value;
+                    var inGameMinutes = realWorldMinutes / 4.0; // Game runs at 0.25x speed
+                    var realWorldTime = TimeSpan.FromMinutes(realWorldMinutes);
+                    var inGameTime = TimeSpan.FromMinutes(inGameMinutes);
+                    embed.AddField("Next Sunrise", $"🌅 In {inGameTime.Hours}h {inGameTime.Minutes}m (IRL: {realWorldTime.Hours}h {realWorldTime.Minutes}m)", inline: false);
                 }
                 if (timeInfo.NextStarSet.HasValue)
                 {
-                    var sunsetTime = TimeSpan.FromMinutes(timeInfo.NextStarSet.Value);
-                    embed.AddField("Next Sunset", $"🌅 In {sunsetTime.Hours}h {sunsetTime.Minutes}m", inline: true);
+                    var realWorldMinutes = timeInfo.NextStarSet.Value;
+                    var inGameMinutes = realWorldMinutes / 4.0; // Game runs at 0.25x speed
+                    var realWorldTime = TimeSpan.FromMinutes(realWorldMinutes);
+                    var inGameTime = TimeSpan.FromMinutes(inGameMinutes);
+                    embed.AddField("Next Sunset", $"🌅 In {inGameTime.Hours}h {inGameTime.Minutes}m (IRL: {realWorldTime.Hours}h {realWorldTime.Minutes}m)", inline: false);
                 }
                 
                 embed.WithColor(GetIlluminationColor(timeInfo.IlluminationStatus))
@@ -529,13 +535,19 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             // Add sunrise/sunset if available
             if (timeInfo.NextStarRise.HasValue)
             {
-                var sunriseTime = TimeSpan.FromMinutes(timeInfo.NextStarRise.Value);
-                embed.AddField("Next Sunrise", $"🌅 In {sunriseTime.Hours}h {sunriseTime.Minutes}m", inline: true);
+                var realWorldMinutes = timeInfo.NextStarRise.Value;
+                var inGameMinutes = realWorldMinutes / 4.0; // Game runs at 0.25x speed
+                var realWorldTime = TimeSpan.FromMinutes(realWorldMinutes);
+                var inGameTime = TimeSpan.FromMinutes(inGameMinutes);
+                embed.AddField("Next Sunrise", $"🌅 In {inGameTime.Hours}h {inGameTime.Minutes}m (IRL: {realWorldTime.Hours}h {realWorldTime.Minutes}m)", inline: false);
             }
             if (timeInfo.NextStarSet.HasValue)
             {
-                var sunsetTime = TimeSpan.FromMinutes(timeInfo.NextStarSet.Value);
-                embed.AddField("Next Sunset", $"🌅 In {sunsetTime.Hours}h {sunsetTime.Minutes}m", inline: true);
+                var realWorldMinutes = timeInfo.NextStarSet.Value;
+                var inGameMinutes = realWorldMinutes / 4.0; // Game runs at 0.25x speed
+                var realWorldTime = TimeSpan.FromMinutes(realWorldMinutes);
+                var inGameTime = TimeSpan.FromMinutes(inGameMinutes);
+                embed.AddField("Next Sunset", $"🌅 In {inGameTime.Hours}h {inGameTime.Minutes}m (IRL: {realWorldTime.Hours}h {realWorldTime.Minutes}m)", inline: false);
             }
             
             embed.WithColor(GetIlluminationColor(timeInfo.IlluminationStatus))
