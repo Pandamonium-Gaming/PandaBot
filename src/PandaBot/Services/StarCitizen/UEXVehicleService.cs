@@ -69,7 +69,7 @@ public class UEXVehicleService
                         continue;
 
                     var name = vehicleElement.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-                    var type = vehicleElement.TryGetProperty("type", out var t) ? t.GetString() ?? "" : "";
+                    var type = DeriveVehicleType(vehicleElement);
                     var manufacturer = vehicleElement.TryGetProperty("company_name", out var m) ? m.GetString() ?? "" : "";
 
                     if (string.IsNullOrWhiteSpace(name))
@@ -84,6 +84,7 @@ public class UEXVehicleService
                         existingCache.Type = type;
                         existingCache.Manufacturer = manufacturer;
                         existingCache.CachedAt = DateTime.UtcNow;
+                        existingCache.CacheVersion = VehicleCache.CurrentCacheVersion;
                         _dbContext.UexVehicleCache.Update(existingCache);
                         updatedCount++;
                     }
@@ -95,7 +96,8 @@ public class UEXVehicleService
                             Name = name,
                             Type = type,
                             Manufacturer = manufacturer,
-                            CachedAt = DateTime.UtcNow
+                            CachedAt = DateTime.UtcNow,
+                            CacheVersion = VehicleCache.CurrentCacheVersion
                         };
                         _dbContext.UexVehicleCache.Add(cacheEntry);
                         createdCount++;
@@ -205,6 +207,7 @@ public class UEXVehicleService
                 existingCache.Type = vehicle.Type;
                 existingCache.Manufacturer = vehicle.Manufacturer;
                 existingCache.CachedAt = DateTime.UtcNow;
+                existingCache.CacheVersion = VehicleCache.CurrentCacheVersion;
                 _dbContext.UexVehicleCache.Update(existingCache);
             }
             else
@@ -215,7 +218,8 @@ public class UEXVehicleService
                     Name = vehicle.Name,
                     Type = vehicle.Type,
                     Manufacturer = vehicle.Manufacturer,
-                    CachedAt = DateTime.UtcNow
+                    CachedAt = DateTime.UtcNow,
+                    CacheVersion = VehicleCache.CurrentCacheVersion
                 };
                 _dbContext.UexVehicleCache.Add(cacheEntry);
             }
@@ -672,6 +676,50 @@ public class UEXVehicleService
         if (locationInfo.Length > 1024)
             locationInfo = string.Join(", ", locations.Take(Math.Min(5, locations.Count))) + (locations.Count > 5 ? $", +{locations.Count - 5} more" : "");
         return locationInfo;
+    }
+
+    /// <summary>
+    /// Derive vehicle type from boolean flags in API response
+    /// </summary>
+    private static string DeriveVehicleType(JsonElement vehicleElement)
+    {
+        // Check for ground vehicle first
+        if (GetBoolProperty(vehicleElement, "is_ground_vehicle"))
+            return "Ground Vehicle";
+
+        // Check for specific ship types
+        if (GetBoolProperty(vehicleElement, "is_cargo"))
+            return "Cargo Ship";
+        if (GetBoolProperty(vehicleElement, "is_mining"))
+            return "Mining Ship";
+        if (GetBoolProperty(vehicleElement, "is_medical"))
+            return "Medical Ship";
+        if (GetBoolProperty(vehicleElement, "is_refuel"))
+            return "Refueling Ship";
+        if (GetBoolProperty(vehicleElement, "is_repair"))
+            return "Repair Ship";
+        if (GetBoolProperty(vehicleElement, "is_exploration"))
+            return "Exploration Ship";
+        if (GetBoolProperty(vehicleElement, "is_racing"))
+            return "Racing Ship";
+        if (GetBoolProperty(vehicleElement, "is_bomber"))
+            return "Bomber";
+        if (GetBoolProperty(vehicleElement, "is_military"))
+            return "Military Ship";
+        if (GetBoolProperty(vehicleElement, "is_passenger"))
+            return "Passenger Ship";
+        if (GetBoolProperty(vehicleElement, "is_salvage"))
+            return "Salvage Ship";
+        if (GetBoolProperty(vehicleElement, "is_construction"))
+            return "Construction Ship";
+        if (GetBoolProperty(vehicleElement, "is_refinery"))
+            return "Refinery Ship";
+
+        // Default to spaceship if no specific type found
+        if (GetBoolProperty(vehicleElement, "is_spaceship"))
+            return "Spaceship";
+
+        return "Vehicle";
     }
 
     private static bool GetBoolProperty(JsonElement element, string propertyName)

@@ -4,6 +4,18 @@
 
 
 
+
+## [1.3.1] - 2026-02-11
+
+### PATCH
+
+- fix(star-citizen): add automatic cache versioning system
+
+- Add CacheVersion field to VehicleCache for automatic invalidation
+- Fix vehicle type derivation from UEX API boolean flags
+- Migration automatically clears outdated cache entries
+- Cache rebuilds with proper vehicle types on startup
+- No manual database deletion needed on production
 ## [1.3.0] - 2026-02-05
 
 ### MINOR

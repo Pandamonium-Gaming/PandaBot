@@ -33,11 +33,25 @@ public class UEXVehicleCacheInitializerService : IHostedService
             var context = scope.ServiceProvider.GetRequiredService<PandaBotContext>();
             var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
 
-            // Check if cache is already populated
+            // Check for outdated cache entries (wrong schema version)
+            var outdatedCount = await context.UexVehicleCache
+                .Where(v => v.CacheVersion < VehicleCache.CurrentCacheVersion)
+                .CountAsync(cancellationToken);
+            
+            if (outdatedCount > 0)
+            {
+                _logger.LogWarning("Found {Count} outdated vehicle cache entries (version mismatch), clearing...", outdatedCount);
+                await context.Database.ExecuteSqlRawAsync("DELETE FROM UexVehicleCache WHERE CacheVersion < {0}", 
+                    VehicleCache.CurrentCacheVersion);
+                _logger.LogInformation("Outdated cache entries cleared");
+            }
+
+            // Check if cache is already populated with current version
             var existingCount = await context.UexVehicleCache.CountAsync(cancellationToken);
             if (existingCount > 0)
             {
-                _logger.LogInformation("Vehicle cache already populated with {Count} vehicles", existingCount);
+                _logger.LogInformation("Vehicle cache already populated with {Count} vehicles (version {Version})", 
+                    existingCount, VehicleCache.CurrentCacheVersion);
                 return;
             }
 
@@ -65,7 +79,8 @@ public class UEXVehicleCacheInitializerService : IHostedService
                         Name = vehicle.Name,
                         Type = vehicle.Type,
                         Manufacturer = vehicle.Manufacturer,
-                        CachedAt = DateTime.UtcNow
+                        CachedAt = DateTime.UtcNow,
+                        CacheVersion = VehicleCache.CurrentCacheVersion
                     };
                     context.UexVehicleCache.Add(cacheEntry);
                 }
@@ -73,7 +88,8 @@ public class UEXVehicleCacheInitializerService : IHostedService
                 _logger.LogDebug("Cached {BatchStart}-{BatchEnd} vehicles", i + 1, Math.Min(i + batchSize, vehicles.Count));
             }
 
-            _logger.LogInformation("✅ Vehicle cache initialization complete - {Count} vehicles cached", vehicles.Count);
+            _logger.LogInformation("✅ Vehicle cache initialization complete - {Count} vehicles cached with version {Version}", 
+                vehicles.Count, VehicleCache.CurrentCacheVersion);
         }
         catch (Exception ex)
         {
