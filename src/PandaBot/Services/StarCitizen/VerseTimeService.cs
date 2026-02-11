@@ -409,10 +409,11 @@ public class VerseTimeService
                 return 4000;
         }
         
-        // Levenshtein distance for fuzzy matching
+        // Levenshtein distance for fuzzy matching - very strict to avoid partial matches
+        // For typed numbers like "area18", prevent matching "area11" (both Levenshtein distance 2)
         int distance = CalculateLevenshteinDistance(normalizedSearch, normalizedTarget);
-        if (distance <= 2) // Allow up to 2 character differences
-            return 3000 - (distance * 500);
+        if (distance == 1) // Only allow single character typos
+            return 3000 - 500;
         
         // Sequential character matching (original algorithm for very loose matches)
         int matches = 0;

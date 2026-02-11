@@ -479,7 +479,7 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
         };
     }
 
-    [ComponentInteraction("time_location_select:*")]
+    [ComponentInteraction("time_location_select:*", true)]
     public async Task HandleLocationSelectAsync(string userId, string[] selectedValues)
     {
         // Verify the user who invoked the menu is the one interacting with it
