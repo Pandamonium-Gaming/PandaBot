@@ -6,6 +6,12 @@
 
 
 
+
+## [1.4.1] - 2026-02-11
+
+### PATCH
+
+- Improve fuzzy location search to handle spaces and typos (Area 18 vs Area18)
 ## [1.4.0] - 2026-02-11
 
 ### MINOR

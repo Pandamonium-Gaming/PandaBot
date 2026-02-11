@@ -351,31 +351,96 @@ public class VerseTimeService
 
     private int CalculateSimilarity(string search, string target)
     {
-        // Exact match
+        // Normalize strings: remove spaces, convert to lowercase
+        var normalizedSearch = search.Replace(" ", "").Replace("-", "").Replace("_", "");
+        var normalizedTarget = target.Replace(" ", "").Replace("-", "").Replace("_", "");
+        
+        // Exact match on normalized strings
+        if (normalizedTarget == normalizedSearch)
+            return 10000;
+        
+        // Exact match on original (case-insensitive already done by caller)
         if (target == search)
-            return 1000;
+            return 9000;
         
-        // Starts with
+        // Starts with (normalized)
+        if (normalizedTarget.StartsWith(normalizedSearch))
+            return 8000;
+        
+        // Starts with (original)
         if (target.StartsWith(search))
-            return 500;
+            return 7000;
         
-        // Contains
+        // Contains (normalized)
+        if (normalizedTarget.Contains(normalizedSearch))
+            return 6000;
+        
+        // Contains (original)
         if (target.Contains(search))
-            return 250;
+            return 5000;
         
-        // Fuzzy matching - count matching characters
+        // Word boundary match - check if search matches start of any word in target
+        var targetWords = target.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var word in targetWords)
+        {
+            if (word.StartsWith(search))
+                return 4000;
+        }
+        
+        // Levenshtein distance for fuzzy matching
+        int distance = CalculateLevenshteinDistance(normalizedSearch, normalizedTarget);
+        if (distance <= 2) // Allow up to 2 character differences
+            return 3000 - (distance * 500);
+        
+        // Sequential character matching (original algorithm for very loose matches)
         int matches = 0;
         int searchIndex = 0;
         
-        for (int i = 0; i < target.Length && searchIndex < search.Length; i++)
+        for (int i = 0; i < normalizedTarget.Length && searchIndex < normalizedSearch.Length; i++)
         {
-            if (target[i] == search[searchIndex])
+            if (normalizedTarget[i] == normalizedSearch[searchIndex])
             {
                 matches++;
                 searchIndex++;
             }
         }
         
-        return searchIndex == search.Length ? matches * 10 : 0;
+        return searchIndex == normalizedSearch.Length ? matches * 10 : 0;
+    }
+
+    private int CalculateLevenshteinDistance(string source, string target)
+    {
+        if (string.IsNullOrEmpty(source))
+            return target?.Length ?? 0;
+        
+        if (string.IsNullOrEmpty(target))
+            return source.Length;
+        
+        int sourceLength = source.Length;
+        int targetLength = target.Length;
+        
+        // Use single array optimization
+        int[] previousRow = new int[targetLength + 1];
+        
+        for (int i = 0; i <= targetLength; i++)
+            previousRow[i] = i;
+        
+        for (int i = 0; i < sourceLength; i++)
+        {
+            int[] currentRow = new int[targetLength + 1];
+            currentRow[0] = i + 1;
+            
+            for (int j = 0; j < targetLength; j++)
+            {
+                int cost = source[i] == target[j] ? 0 : 1;
+                currentRow[j + 1] = Math.Min(
+                    Math.Min(currentRow[j] + 1, previousRow[j + 1] + 1),
+                    previousRow[j] + cost);
+            }
+            
+            previousRow = currentRow;
+        }
+        
+        return previousRow[targetLength];
     }
 }

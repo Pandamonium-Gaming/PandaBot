@@ -42,6 +42,7 @@
     "allowedchannels",
     "allowtracking",
     "appsettings",
+    "arcsin",
     "Ashes",
     "ashesforge",
     "Ashesforge",
@@ -154,6 +155,7 @@
     "userid",
     "usersreacted",
     "vcproj",
+    "versetime",
     "Warbond",
     "wixproj",
     "wwaproj"
