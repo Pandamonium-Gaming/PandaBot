@@ -363,27 +363,49 @@ public class VerseTimeService
         if (target == search)
             return 9000;
         
-        // Starts with (normalized)
-        if (normalizedTarget.StartsWith(normalizedSearch))
-            return 8000;
+        // Check if normalized search equals normalized target exactly (highest priority)
+        // This ensures "area18" matches "Area18" but not "Area19"
+        if (normalizedTarget.Equals(normalizedSearch, StringComparison.Ordinal))
+            return 8500;
         
-        // Starts with (original)
-        if (target.StartsWith(search))
+        // Word-for-word match (e.g., "new babbage" matches "New Babbage")
+        var searchWords = search.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        var targetWords = target.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        if (searchWords.Length == targetWords.Length)
+        {
+            bool allWordsMatch = true;
+            for (int i = 0; i < searchWords.Length; i++)
+            {
+                if (!targetWords[i].Equals(searchWords[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    allWordsMatch = false;
+                    break;
+                }
+            }
+            if (allWordsMatch)
+                return 8400;
+        }
+        
+        // Starts with (original) - only if lengths are close to avoid "area1" matching "area19"
+        if (target.StartsWith(search) && Math.Abs(normalizedTarget.Length - normalizedSearch.Length) <= 3)
             return 7000;
         
-        // Contains (normalized)
-        if (normalizedTarget.Contains(normalizedSearch))
-            return 6000;
+        // Starts with (normalized) - only if lengths are close
+        if (normalizedTarget.StartsWith(normalizedSearch) && Math.Abs(normalizedTarget.Length - normalizedSearch.Length) <= 3)
+            return 6500;
         
         // Contains (original)
         if (target.Contains(search))
             return 5000;
         
+        // Contains (normalized)
+        if (normalizedTarget.Contains(normalizedSearch))
+            return 4500;
+        
         // Word boundary match - check if search matches start of any word in target
-        var targetWords = target.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
         foreach (var word in targetWords)
         {
-            if (word.StartsWith(search))
+            if (word.StartsWith(search, StringComparison.OrdinalIgnoreCase))
                 return 4000;
         }
         

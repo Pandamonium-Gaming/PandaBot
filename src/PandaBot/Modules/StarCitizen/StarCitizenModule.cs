@@ -426,21 +426,35 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             }
             else
             {
-                // Multiple results - show selection menu
-                var description = "**Multiple locations found:**\n\n";
+                // Multiple results - show selection dropdown
+                var menuBuilder = new SelectMenuBuilder()
+                    .WithPlaceholder("Select a location...")
+                    .WithCustomId($"time_location_select:{Context.User.Id}")
+                    .WithMinValues(1)
+                    .WithMaxValues(1);
+                
                 for (int i = 0; i < Math.Min(5, locations.Count); i++)
                 {
-                    description += $"{i + 1}. **{locations[i].Name}** ({locations[i].Type}) - {locations[i].ParentBody}\n";
+                    var loc = locations[i];
+                    menuBuilder.AddOption(
+                        label: loc.Name,
+                        value: loc.Name,
+                        description: $"{loc.Type} on {loc.ParentBody}"
+                    );
                 }
-                description += $"\nPlease be more specific or use an exact location name.";
                 
-                var embed = new EmbedBuilder()
-                    .WithTitle("🔍 Location Search Results")
-                    .WithDescription(description)
-                    .WithColor(Discord.Color.Blue)
+                var component = new ComponentBuilder()
+                    .WithSelectMenu(menuBuilder)
                     .Build();
                 
-                await FollowupAsync(embed: embed);
+                var embed = new EmbedBuilder()
+                    .WithTitle("🔍 Multiple Locations Found")
+                    .WithDescription($"Found {locations.Count} locations matching '{locationName}'.\nPlease select one from the dropdown below:")
+                    .WithColor(Discord.Color.Blue)
+                    .WithFooter("This menu will expire in 2 minutes")
+                    .Build();
+                
+                await FollowupAsync(embed: embed, components: component);
             }
         }
         catch (Exception ex)
@@ -463,5 +477,62 @@ public class StarCitizenModule : InteractionModuleBase<SocketInteractionContext>
             "Evening Twilight" => new Discord.Color(70, 130, 180), // Steel blue
             _ => Discord.Color.DarkGrey
         };
+    }
+
+    [ComponentInteraction("time_location_select:*")]
+    public async Task HandleLocationSelectAsync(string userId, string[] selectedValues)
+    {
+        // Verify the user who invoked the menu is the one interacting with it
+        if (Context.User.Id.ToString() != userId)
+        {
+            await RespondAsync("❌ This menu is not for you!", ephemeral: true);
+            return;
+        }
+
+        await DeferAsync();
+
+        var locationName = selectedValues[0];
+        var logger = Services.GetRequiredService<ILogger<StarCitizenModule>>();
+        logger.LogInformation("User {UserId} selected location: {Location}", Context.User.Id, locationName);
+
+        try
+        {
+            var verseTimeService = Services.GetRequiredService<VerseTimeService>();
+            var timeInfo = await verseTimeService.GetLocationTimeAsync(locationName);
+
+            if (timeInfo == null)
+            {
+                await FollowupAsync($"❌ Failed to calculate time for {locationName}. The parent celestial body data may be unavailable.");
+                return;
+            }
+
+            var embed = new EmbedBuilder()
+                .WithTitle($"🕐 Local Time - {timeInfo.LocationName}")
+                .WithDescription($"**{timeInfo.LocalTimeFormatted}** ({timeInfo.IlluminationStatus})")
+                .AddField("Parent Body", timeInfo.ParentBody, inline: true)
+                .AddField("Parent Star", timeInfo.ParentStar, inline: true)
+                .WithColor(GetIlluminationColor(timeInfo.IlluminationStatus))
+                .WithFooter($"Data from VerseTime • Time calculated at {DateTime.UtcNow:HH:mm:ss} UTC")
+                .WithCurrentTimestamp()
+                .Build();
+
+            await FollowupAsync(embed: embed);
+
+            // Delete the original selection message
+            try
+            {
+                var originalMessage = await Context.Interaction.GetOriginalResponseAsync();
+                await originalMessage.DeleteAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to delete dropdown message");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error fetching location time");
+            await FollowupAsync($"❌ Error fetching location time: {ex.Message}");
+        }
     }
 }
