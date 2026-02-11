@@ -1,49 +1,52 @@
 # Changelog
 
+All notable changes to PandaBot will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## \[1.4.1] - 2026-02-11
 
+### Fixed
 
+* Improve fuzzy location search to handle spaces and typos (Area 18 vs Area18)
 
+## \[1.4.0] - 2026-02-11
 
+### Added
 
-## [1.4.1] - 2026-02-11
+* Add /sc time command to show Star Citizen local times using VerseTime data
 
-### PATCH
+## \[1.3.1] - 2026-02-11
 
-- Improve fuzzy location search to handle spaces and typos (Area 18 vs Area18)
-## [1.4.0] - 2026-02-11
+### Fixed
 
-### MINOR
+* fix(star-citizen): add automatic cache versioning system
+* Add CacheVersion field to VehicleCache for automatic invalidation
+* Fix vehicle type derivation from UEX API boolean flags
+* Migration automatically clears outdated cache entries
+* Cache rebuilds with proper vehicle types on startup
+* No manual database deletion needed on production
 
-- Add /sc time command to show Star Citizen local times using VerseTime data
-## [1.3.1] - 2026-02-11
+## \[1.3.0] - 2026-02-05
 
-### PATCH
+### Added
 
-- fix(star-citizen): add automatic cache versioning system
+* Implement SC Ship / Vehicle and Item commands
 
-- Add CacheVersion field to VehicleCache for automatic invalidation
-- Fix vehicle type derivation from UEX API boolean flags
-- Migration automatically clears outdated cache entries
-- Cache rebuilds with proper vehicle types on startup
-- No manual database deletion needed on production
-## [1.3.0] - 2026-02-05
+## \[1.2.4] - 2026-02-05
 
-### MINOR
+### Changed
 
-- Implement SC Ship / Vehicle and Item commands
-## [1.2.4] - 2026-02-05
+* chore: change ashes command to aoc and adopt short command names across modules
 
-### PATCH
+## \[1.2.3] - 2026-02-05
 
-- chore: change ashes command to aoc and adopt short command names across modules
-## [1.2.3] - 2026-02-05
+### Changed
 
-### PATCH
+* Add full command names with aliases and PowerShell documentation updates
 
-- Add full command names with aliases and PowerShell documentation updates
-## [1.2.2] - 2026-02-05
+## \[1.2.2] - 2026-02-05
 
 ### Fixed
 
@@ -52,6 +55,7 @@
   * Now uses `https://api.returnofreckoning.com/stats/online_list_new.php?realm_id=1`
   * More accurate and faster player count reporting
   * Better error handling for API responses
+
 ## \[1.2.1] - 2026-02-05
 
 ### Changed
@@ -70,7 +74,6 @@
   * New `/ror status` slash command to check ROR server status and player counts
   * Web scraper service that fetches real-time data from returnofreckoning.com
   * Color-coded embed responses (🟢 Online / 🔴 Offline) with player information
-
 * Configurable game modules system
   * New `GameModules` configuration section in appsettings.json
   * Feature flags to enable/disable each game module independently
@@ -91,12 +94,10 @@
   * Fixed RORModule to use runtime service resolution instead of constructor injection
   * Allows modules to load even when their dependencies aren't registered
   * Matches pattern used by existing StarCitizen and PathOfExile modules
-
 * Ashes of Creation service issues
   * Resolved merge conflicts in AshesForgeApiService and AshesRecipeService
   * Fixed missing `GetProfessionLevelFromName` and `GetLevelNameFromNumber` helper methods
   * Fixed JsonHelper method calls with proper prefix in GetProfessionLevel()
-
 * Disabled Ashes of Creation by default in production
   * Set `EnableAshesOfCreation: false` in appsettings.json
   * Reduces unnecessary API calls and memory usage when module not actively used
@@ -104,19 +105,15 @@
 
 ## \[1.1.1] - 2026-02-01
 
-### PATCH
+### Fixed
 
 * Fix Path of Exile API endpoint parsing
 
 ## \[1.1.0] - 2026-02-01
 
-### MINOR
+### Added
 
 * Add Path of Exile status command
-  All notable changes to PandaBot will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## \[1.0.4] - 2026-02-01
 

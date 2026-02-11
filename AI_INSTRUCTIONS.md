@@ -9,7 +9,7 @@ This file provides guidelines for AI agents (like GitHub Copilot) working on the
 **CRITICAL:** This codebase runs on Windows. Always use PowerShell cmdlets, NOT bash equivalent commands.
 
 | Task | PowerShell | ❌ DON'T USE |
-|------|-----------|------------|
+| ---- | ---------- | ----------- |
 | List files | `Get-ChildItem` or `dir` | `ls` |
 | View file end | `Get-Content -Tail 20 filename` | `tail` |
 | View file | `Get-Content filename` | `cat` |
@@ -52,37 +52,41 @@ Test-Path filename.txt
 
 ## Version Management
 
-**CRITICAL: Always use VersionManager tool for version changes**
+> **CRITICAL:** Always use VersionManager tool for version changes
 
 Never manually edit `PandaBot.csproj` or `CHANGELOG.md` version numbers.
 
 ### Version Bump Workflow
 
 1. **Build VersionManager as Release (REQUIRED):**
+
    ```bash
    dotnet build tools/VersionManager/VersionManager.csproj -c Release
    ```
 
 2. **Bump the version:**
+
    ```bash
    dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version X.X.X --type patch --message "Brief description of changes"
    ```
 
 3. **Validate the bump:**
+
    ```bash
    dotnet artifacts/bin/VersionManager/release/VersionManager.dll validate
    ```
 
 4. **Build to verify:**
+
    ```bash
    dotnet build
    ```
 
 ### Version Bump Types
 
-- **patch** (1.2.0 → 1.2.1): Bug fixes, minor improvements, hotfixes
-- **minor** (1.2.0 → 1.3.0): New features, enhancements, new modules
-- **major** (1.2.0 → 2.0.0): Breaking changes, major refactors
+* **patch** (1.2.0 → 1.2.1): Bug fixes, minor improvements, hotfixes
+* **minor** (1.2.0 → 1.3.0): New features, enhancements, new modules
+* **major** (1.2.0 → 2.0.0): Breaking changes, major refactors
 
 ### Example Bumps
 
@@ -102,16 +106,16 @@ dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version 2.
 
 ### Important Notes
 
-- **Always build release first:** The VersionManager must be compiled as Release before use
-- **Use the built .dll:** Execute from `artifacts/bin/VersionManager/release/VersionManager.dll`, not via `dotnet run`
-- **CHANGELOG consistency:** Verify CHANGELOG.md uses consistent formatting (e.g., `### Fixed`, `### Added` with bullet points)
-- **Increment PandaBot version:** Always keep version numbers in sync between .csproj and CHANGELOG.md
+* **Always build release first:** The VersionManager must be compiled as Release before use
+* **Use the built .dll:** Execute from `artifacts/bin/VersionManager/release/VersionManager.dll`, not via `dotnet run`
+* **CHANGELOG consistency:** Verify CHANGELOG.md uses consistent formatting (e.g., `### Fixed`, `### Added` with bullet points)
+* **Increment PandaBot version:** Always keep version numbers in sync between .csproj and CHANGELOG.md
 
 ## Commit Messages
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/) format:
 
-```
+```text
 type(scope): description
 
 optional body
@@ -120,28 +124,29 @@ optional footer
 
 ### Message Types
 
-- **feat:** New feature (use with `minor` version bump)
-- **fix:** Bug fix (use with `patch` version bump)
-- **refactor:** Code restructuring without changing behavior
-- **chore:** Build, dependencies, tooling
-- **docs:** Documentation updates
-- **test:** Test additions or modifications
+* **feat:** New feature (use with `minor` version bump)
+* **fix:** Bug fix (use with `patch` version bump)
+* **refactor:** Code restructuring without changing behavior
+* **chore:** Build, dependencies, tooling
+* **docs:** Documentation updates
+* **test:** Test additions or modifications
 
 ### Scopes
 
 Use component/module names:
-- `ror` - Return of Reckoning module
-- `aoc` - Ashes of Creation module
-- `di` - Dependency injection
-- `logging` - Logging infrastructure
-- `db` - Database/migrations
-- `config` - Configuration system
-- `discord` - Discord.Net integration
-- `version` - Version management
+
+* `ror` - Return of Reckoning module
+* `aoc` - Ashes of Creation module
+* `di` - Dependency injection
+* `logging` - Logging infrastructure
+* `db` - Database/migrations
+* `config` - Configuration system
+* `discord` - Discord.Net integration
+* `version` - Version management
 
 ### Examples
 
-```
+```text
 feat(ror): add web scraper for server status
 
 fix(aoc): resolve JsonHelper method calls
@@ -156,21 +161,23 @@ docs(contributing): add AI instructions
 ## Build and Verification Workflow
 
 1. **Always build after making changes:**
+
    ```bash
    dotnet build
    ```
 
 2. **Verify successful build output:**
-   - `Build succeeded in X.Xs`
-   - No errors or warnings
+   * `Build succeeded in X.Xs`
+   * No errors or warnings
 
 3. **If build fails:**
-   - Read the error message carefully
-   - Check file paths and using statements
-   - Verify XML/JSON syntax for config files
-   - Do NOT proceed until build succeeds
+   * Read the error message carefully
+   * Check file paths and using statements
+   * Verify XML/JSON syntax for config files
+   * Do NOT proceed until build succeeds
 
 4. **After major changes, rebuild release config:**
+
    ```bash
    dotnet build -c Release
    ```
@@ -215,9 +222,9 @@ This prevents unnecessary resource allocation when modules are disabled.
 
 ### Dependency Injection
 
-- **Scoped:** Services tied to request lifetime (database contexts, per-command operations)
-- **Singleton:** Application-wide services (Discord client, config, logger)
-- **Transient:** New instance each time (rarely used in this project)
+* **Scoped:** Services tied to request lifetime (database contexts, per-command operations)
+* **Singleton:** Application-wide services (Discord client, config, logger)
+* **Transient:** New instance each time (rarely used in this project)
 
 ## Logging Best Practices
 
@@ -231,10 +238,10 @@ _logger.LogWarning("Service {ServiceName} took {Duration}ms", serviceName, durat
 
 ### Log Levels
 
-- **Information:** Normal operations (startup phases, command execution, successful API calls)
-- **Warning:** Potentially problematic situations (retries, degraded service, timeouts)
-- **Error:** Error occurrences (API failures, invalid data, exceptions)
-- **Debug/Trace:** Detailed diagnostic info (statement-level tracing)
+* **Information:** Normal operations (startup phases, command execution, successful API calls)
+* **Warning:** Potentially problematic situations (retries, degraded service, timeouts)
+* **Error:** Error occurrences (API failures, invalid data, exceptions)
+* **Debug/Trace:** Detailed diagnostic info (statement-level tracing)
 
 ### Logging at Startup
 
@@ -258,7 +265,7 @@ This ensures production logs show exactly where failures occur.
 
 ## File Organization
 
-```
+```text
 src/PandaBot/
 ├── Models/                 # Data models
 │   └── GameModules/       # Game-specific models
@@ -275,7 +282,8 @@ src/PandaBot/
 ### Adding a New Game Module
 
 1. Create folder structure:
-   ```
+
+   ```text
    Services/YourGame/
    Models/YourGame/
    Modules/YourGame/
@@ -290,6 +298,7 @@ src/PandaBot/
 5. Add feature flag in `GameModulesConfig.cs`
 
 6. Add configuration to `appsettings.json`:
+
    ```json
    "GameModules": {
      "EnableYourGame": true
@@ -299,24 +308,26 @@ src/PandaBot/
 ## Testing Changes Locally
 
 1. **Build the project:**
+
    ```bash
    dotnet build
    ```
 
 2. **Run the bot locally:**
+
    ```bash
    dotnet run
    ```
 
 3. **Check startup logs:**
-   - Look for "✅ PandaBot vX.X.X is running"
-   - Verify module count: "Found N interaction modules"
-   - Verify command count: "Registered M commands"
+   * Look for "✅ PandaBot vX.X.X is running"
+   * Verify module count: "Found N interaction modules"
+   * Verify command count: "Registered M commands"
 
 4. **Test Discord commands:**
-   - Connect to test Discord server
-   - Run `/about` to see bot info and verify changes
-   - Test new features manually
+   * Connect to test Discord server
+   * Run `/about` to see bot info and verify changes
+   * Test new features manually
 
 ## Testing External APIs
 
@@ -336,13 +347,13 @@ Use PowerShell to validate the API response:
 
 ### Validation Checklist
 
-- [ ] API endpoint is accessible (no 404, 500 errors)
-- [ ] Response is valid JSON (not HTML error pages)
-- [ ] Response structure matches service expectations
-- [ ] Response includes required fields for parsing
-- [ ] Response handles errors gracefully (rate limits, timeouts, offline)
-- [ ] Service code parses response correctly
-- [ ] Build succeeds: `dotnet build`
+* \[ ] API endpoint is accessible (no 404, 500 errors)
+* \[ ] Response is valid JSON (not HTML error pages)
+* \[ ] Response structure matches service expectations
+* \[ ] Response includes required fields for parsing
+* \[ ] Response handles errors gracefully (rate limits, timeouts, offline)
+* \[ ] Service code parses response correctly
+* \[ ] Build succeeds: `dotnet build`
 
 ### Example: Testing ROR API
 
@@ -360,10 +371,10 @@ Use PowerShell to validate the API response:
 1. Read the error message: `Program.cs(23,6): error CS1061: ...`
 2. Open the file and line number
 3. Check for:
-   - Missing `using` statements
-   - Typos in method/property names
-   - XML/JSON syntax errors
-   - Wrong types or generic parameters
+   * Missing `using` statements
+   * Typos in method/property names
+   * XML/JSON syntax errors
+   * Wrong types or generic parameters
 4. Fix and run `dotnet build` again
 
 ### Add a New Command
@@ -415,9 +426,10 @@ Contains non-sensitive defaults:
 ### appsettings.Production.json (NOT in source control)
 
 Contains production overrides:
-- Discord bot token
-- Production database connection string
-- Environment-specific settings
+
+* Discord bot token
+* Production database connection string
+* Environment-specific settings
 
 **Never commit sensitive data to source control.**
 
@@ -473,15 +485,16 @@ public RORStatusService(HttpClient httpClient) { }
 
 ## Resources
 
-- [Conventional Commits](https://www.conventionalcommits.org/)
-- [Keep a Changelog](https://keepachangelog.com/)
-- [Discord.Net Documentation](https://discordnet.dev/)
-- [Entity Framework Core](https://docs.microsoft.com/en-us/ef/core/)
-- Local: Read [DEVELOPMENT.md](DEVELOPMENT.md) for setup guide
+* [Conventional Commits](https://www.conventionalcommits.org/)
+* [Keep a Changelog](https://keepachangelog.com/)
+* [Discord.Net Documentation](https://discordnet.dev/)
+* [Entity Framework Core](https://docs.microsoft.com/en-us/ef/core/)
+* Local: Read [DEVELOPMENT.md](DEVELOPMENT.md) for setup guide
 
 ## Questions or Changes?
 
 If you encounter patterns not covered here or have suggestions for improvements:
+
 1. Document the pattern you used
 2. Add it to this file
 3. Mention it in commit message
