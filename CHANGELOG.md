@@ -1,10 +1,17 @@
 # Changelog
 
+## [1.5.0] - 2026-02-12
+
+### MINOR
+
+* feat: add sunrise/sunset times and dual time display for locations
+
 ## [1.4.2] - 2026-02-11
 
 ### PATCH
 
 * Fix location search fuzzy matching and add interactive dropdown for disambiguation
+
 All notable changes to PandaBot will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
