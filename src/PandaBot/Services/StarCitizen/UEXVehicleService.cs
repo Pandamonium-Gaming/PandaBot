@@ -149,8 +149,25 @@ public class UEXVehicleService
 
             if (!vehicles.Any())
             {
-                _logger.LogWarning("No vehicles found in cache");
-                return new();
+                _logger.LogWarning("No vehicles found in cache, attempting to refresh from API");
+                var refreshSuccess = await RefreshVehicleCacheAsync();
+                if (!refreshSuccess)
+                {
+                    _logger.LogError("Failed to refresh vehicle cache from API");
+                    return new();
+                }
+                
+                // Retry the query after refresh
+                vehicles = await _dbContext.UexVehicleCache
+                    .Where(v => v.CachedAt > cutoffTime)
+                    .OrderBy(v => v.Name)
+                    .ToListAsync();
+                
+                if (!vehicles.Any())
+                {
+                    _logger.LogWarning("No vehicles found even after cache refresh");
+                    return new();
+                }
             }
 
             // Score by similarity

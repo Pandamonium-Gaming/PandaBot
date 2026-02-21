@@ -265,12 +265,12 @@ void UpdateChangelogVersion(string filePath, string newVersion, string type, str
     if (!string.IsNullOrWhiteSpace(message))
     {
         newEntry += $"\n### {type.ToUpper()}\n\n";
-        newEntry += $"- {message}\n";
+        newEntry += $"* {message}\n";
     }
     else
     {
         newEntry += $"\n### {type.ToUpper()}\n\n";
-        newEntry += "- \n";
+        newEntry += "* \n";
     }
 
     // Insert after the "# Changelog" header

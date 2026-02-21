@@ -63,6 +63,29 @@ public class UEXItemService
                 .OrderBy(x => x.Name)
                 .ToListAsync();
 
+            if (!cachedItems.Any())
+            {
+                _logger.LogWarning("No items found in cache, attempting to refresh from API");
+                var refreshSuccess = await RefreshItemCacheAsync();
+                if (!refreshSuccess)
+                {
+                    _logger.LogError("Failed to refresh item cache from API");
+                    return new List<ItemCache>();
+                }
+                
+                // Retry the query after refresh
+                cachedItems = await _dbContext.UexItemCache
+                    .Where(x => x.CachedAt > expirationCutoff)
+                    .OrderBy(x => x.Name)
+                    .ToListAsync();
+                
+                if (!cachedItems.Any())
+                {
+                    _logger.LogWarning("No items found even after cache refresh");
+                    return new List<ItemCache>();
+                }
+            }
+
             _logger.LogDebug("Found {Count} non-expired cached items for fuzzy search", cachedItems.Count);
 
             // Score and sort results by similarity
@@ -450,5 +473,107 @@ public class UEXItemService
             LocationCount = validPrices.Select(p => p.LocationName).Distinct().Count(),
             LastUpdated = DateTime.UtcNow
         };
+    }
+
+    /// <summary>
+    /// Refresh item cache by fetching all items from UEX API
+    /// </summary>
+    public async Task<bool> RefreshItemCacheAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Starting item cache refresh from UEX API");
+            var startTime = DateTime.UtcNow;
+
+            var url = ItemsEndpoint;
+            var response = await _httpClient.GetAsync(url);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to fetch items from UEX API: {StatusCode}", response.StatusCode);
+                return false;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(content);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("data", out var dataArray) || dataArray.ValueKind != JsonValueKind.Array)
+            {
+                _logger.LogError("Invalid response format from UEX API: missing or invalid 'data' array");
+                return false;
+            }
+
+            var itemCount = 0;
+            var updatedCount = 0;
+            var createdCount = 0;
+
+            foreach (var itemElement in dataArray.EnumerateArray())
+            {
+                try
+                {
+                    var itemId = itemElement.TryGetProperty("id", out var id) && id.TryGetInt32(out var idVal) ? idVal : 0;
+                    if (itemId == 0)
+                        continue;
+
+                    var name = itemElement.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                    var category = itemElement.TryGetProperty("category", out var c) ? c.GetString() ?? "" : "";
+                    var company = itemElement.TryGetProperty("company_name", out var comp) ? comp.GetString() : null;
+
+                    if (string.IsNullOrWhiteSpace(name))
+                        continue;
+
+                    var existingCache = await _dbContext.UexItemCache
+                        .FirstOrDefaultAsync(i => i.UexItemId == itemId);
+
+                    if (existingCache != null)
+                    {
+                        existingCache.Name = name;
+                        existingCache.Category = category;
+                        existingCache.Company = company;
+                        existingCache.CachedAt = DateTime.UtcNow;
+                        _dbContext.UexItemCache.Update(existingCache);
+                        updatedCount++;
+                    }
+                    else
+                    {
+                        var cacheEntry = new ItemCache
+                        {
+                            UexItemId = itemId,
+                            Name = name,
+                            Category = category,
+                            Company = company,
+                            CachedAt = DateTime.UtcNow
+                        };
+                        _dbContext.UexItemCache.Add(cacheEntry);
+                        createdCount++;
+                    }
+
+                    itemCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error processing individual item from API response");
+                }
+            }
+
+            if (itemCount > 0)
+            {
+                await _dbContext.SaveChangesAsync();
+                var elapsed = DateTime.UtcNow - startTime;
+                _logger.LogInformation("Item cache refresh completed: {TotalCount} items processed ({CreatedCount} created, {UpdatedCount} updated) in {ElapsedSeconds:F2}s",
+                    itemCount, createdCount, updatedCount, elapsed.TotalSeconds);
+                return true;
+            }
+            else
+            {
+                _logger.LogWarning("No items found in API response");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing item cache from UEX API");
+            return false;
+        }
     }
 }

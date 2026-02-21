@@ -1,21 +1,26 @@
 # Changelog
 
-## [1.5.0] - 2026-02-12
-
-### MINOR
-
-* feat: add sunrise/sunset times and dual time display for locations
-
-## [1.4.2] - 2026-02-11
+## \[1.5.1] - 2026-02-21
 
 ### PATCH
 
-* Fix location search fuzzy matching and add interactive dropdown for disambiguation
-
-All notable changes to PandaBot will be documented in this file.
+* Fix UEX cache auto-refresh and add item cache initialization
+  All notable changes to PandaBot will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## \[1.5.0] - 2026-02-12
+
+### Added
+
+* feat: add sunrise/sunset times and dual time display for locations
+
+## \[1.4.2] - 2026-02-11
+
+### Fixed
+
+* Fix location search fuzzy matching and add interactive dropdown for disambiguation
 
 ## \[1.4.1] - 2026-02-11
 

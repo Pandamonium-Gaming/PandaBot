@@ -86,6 +86,29 @@ try
     }
     Log.Information("Vehicle cache initialization completed");
 
+    Log.Information("Initializing UEX item cache...");
+    using (var scope = host.Services.CreateScope())
+    {
+        try
+        {
+            var uexItemService = scope.ServiceProvider.GetRequiredService<PandaBot.Services.StarCitizen.UEXItemService>();
+            var itemCacheRefreshSuccess = await uexItemService.RefreshItemCacheAsync();
+            if (itemCacheRefreshSuccess)
+            {
+                Log.Information("UEX item cache initialized successfully");
+            }
+            else
+            {
+                Log.Warning("UEX item cache initialization had issues, continuing startup");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to initialize UEX item cache, continuing startup");
+        }
+    }
+    Log.Information("Item cache initialization completed");
+
     Log.Information("Getting DiscordBotService from DI container...");
     var botService = host.Services.GetRequiredService<DiscordBotService>();
     Log.Information("DiscordBotService retrieved successfully");
