@@ -1,5 +1,11 @@
 # Changelog
 
+## \[1.5.2] - 2026-04-27
+
+### PATCH
+
+* Upgrade to .NET 10 (SDK 10.0.203), target framework net10.0, and pin CI runners to ubuntu-24.04
+
 ## \[1.5.1] - 2026-02-21
 
 ### PATCH
