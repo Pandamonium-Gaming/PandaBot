@@ -1,6 +1,7 @@
 [Unit]
 Description=PandaBot Discord Bot Service
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
@@ -8,11 +9,18 @@ User=pandabot
 WorkingDirectory=/opt/pandabot
 ExecStart=/opt/pandabot/PandaBot
 EnvironmentFile=/opt/pandabot/.env
-Restart=always
-RestartSec=10
+Restart=on-failure
+RestartSec=5
+KillMode=process
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=pandabot
+
+# Runtime location (installed to non-standard path via dotnet-install.sh)
+Environment=DOTNET_ROOT=/usr/local/dotnet
+
+# Bot secrets / config overrides
+EnvironmentFile=/opt/pandabot/.env
 
 # Security settings
 NoNewPrivileges=true
