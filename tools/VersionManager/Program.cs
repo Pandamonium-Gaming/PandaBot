@@ -226,8 +226,8 @@ string ExtractChangelogVersion(string filePath)
         throw new FileNotFoundException($"File not found: {filePath}");
 
     var content = File.ReadAllText(filePath);
-    // Match ## [x.x.x] format, handling both escaped and non-escaped brackets
-    var match = Regex.Match(content, @"##\s+\\?\[([^\]]+)\]");
+    // Find the first released semantic version entry, ignoring [Unreleased].
+    var match = Regex.Match(content, @"^##\s+\\?\[(\d+\.\d+\.\d+)\]", RegexOptions.Multiline);
 
     if (!match.Success)
         throw new InvalidOperationException("Could not find version header in CHANGELOG.md");
@@ -261,27 +261,72 @@ void UpdateChangelogVersion(string filePath, string newVersion, string type, str
     var content = File.ReadAllText(filePath);
     var today = DateTime.Now.ToString("yyyy-MM-dd");
 
+    var section = type.ToLowerInvariant() switch
+    {
+        "major" => "Changed",
+        "minor" => "Added",
+        _ => "Changed"
+    };
+
     var newEntry = $"## [{newVersion}] - {today}\n";
     if (!string.IsNullOrWhiteSpace(message))
     {
-        newEntry += $"\n### {type.ToUpper()}\n\n";
+        newEntry += $"\n### {section}\n\n";
         newEntry += $"* {message}\n";
     }
     else
     {
-        newEntry += $"\n### {type.ToUpper()}\n\n";
+        newEntry += $"\n### {section}\n\n";
         newEntry += "* \n";
     }
 
-    // Insert after the "# Changelog" header
-    var updatedContent = Regex.Replace(
-        content,
-        @"(#\s+Changelog\s*\n)",
-        $"$1\n{newEntry}",
-        RegexOptions.Multiline
-    );
+    // Insert before the first released version header so preamble and [Unreleased] remain intact.
+    var firstReleaseHeader = Regex.Match(content, @"^##\s+\\?\[(\d+\.\d+\.\d+)\]", RegexOptions.Multiline);
+    string updatedContent;
+    if (firstReleaseHeader.Success)
+    {
+        updatedContent = content.Insert(firstReleaseHeader.Index, $"{newEntry}\n");
+    }
+    else
+    {
+        updatedContent = content.TrimEnd() + "\n\n" + newEntry;
+    }
+
+    updatedContent = RemoveEmptyUnreleasedSection(updatedContent);
 
     File.WriteAllText(filePath, updatedContent);
+}
+
+string RemoveEmptyUnreleasedSection(string content)
+{
+    var unreleasedHeader = Regex.Match(content, @"^##\s+\\?\[Unreleased\]\s*$", RegexOptions.Multiline);
+    if (!unreleasedHeader.Success)
+        return content;
+
+    var sectionStart = unreleasedHeader.Index;
+
+    // Find the next level-2 header after [Unreleased].
+    var nextHeader = Regex.Match(content.Substring(unreleasedHeader.Index + unreleasedHeader.Length), @"^##\s+", RegexOptions.Multiline);
+    var sectionEnd = nextHeader.Success
+        ? unreleasedHeader.Index + unreleasedHeader.Length + nextHeader.Index
+        : content.Length;
+
+    var sectionText = content.Substring(sectionStart, sectionEnd - sectionStart);
+
+    // Treat section as non-empty only when it has a bullet with real text.
+    var hasRealBullet = Regex.IsMatch(sectionText, @"^[ \t]*[*-][ \t]+\S.+$", RegexOptions.Multiline);
+    if (hasRealBullet)
+        return content;
+
+    var before = content.Substring(0, sectionStart).TrimEnd();
+    var after = content.Substring(sectionEnd).TrimStart();
+
+    if (string.IsNullOrEmpty(before))
+        return after;
+    if (string.IsNullOrEmpty(after))
+        return before + "\n";
+
+    return before + "\n\n" + after;
 }
 
 List<string> GetVersionTags()
