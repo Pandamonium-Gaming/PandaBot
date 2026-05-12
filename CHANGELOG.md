@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.5] - 2026-05-12
+
+### Changed
+
+* add config binding diagnostics and stronger deploy service checks
+
 ## [1.5.4] - 2026-05-12
 
 ### Changed

@@ -146,8 +146,8 @@ jobs:
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
           "ok=0; \
            for i in \$(seq 1 20); do \
-             ACTIVE=\$(sudo systemctl is-active pandabot.service || true); \
-             SUB=\$(sudo systemctl show -p SubState --value pandabot.service || true); \
+             ACTIVE=\$(sudo -n systemctl is-active pandabot.service || true); \
+             SUB=\$(sudo -n systemctl show -p SubState --value pandabot.service || true); \
              echo \"Attempt \$i: active=\$ACTIVE substate=\$SUB\"; \
              if [ \"\$ACTIVE\" = \"active\" ] && [ \"\$SUB\" = \"running\" ]; then \
                ok=1; \
@@ -155,8 +155,9 @@ jobs:
              fi; \
              sleep 3; \
            done; \
-           sudo systemctl status pandabot.service --no-pager || true; \
-           sudo journalctl -u pandabot.service -n 80 --no-pager || true; \
+           sudo -n systemctl status pandabot.service --no-pager || true; \
+           sudo -n systemctl show pandabot.service -p ActiveState,SubState,ExecMainStatus,ExecMainCode,Result --no-pager || true; \
+           sudo -n journalctl -u pandabot.service -n 200 --no-pager || true; \
            [ \"\$ok\" -eq 1 ]"
 
     - name: Cleanup SSH key

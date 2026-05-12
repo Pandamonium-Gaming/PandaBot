@@ -16,7 +16,30 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddDiscordBot(this IServiceCollection services, IConfiguration configuration)
     {
-        var botConfig = configuration.GetSection("Discord").Get<BotConfig>() ?? new BotConfig();
+        var discordSection = configuration.GetSection("Discord");
+        BotConfig botConfig;
+        try
+        {
+            botConfig = discordSection.Get<BotConfig>() ?? new BotConfig();
+        }
+        catch (Exception ex)
+        {
+            var diagnostics = string.Join(
+                ", ",
+                [
+                    $"Discord:GuildId='{discordSection["GuildId"] ?? "<null>"}'",
+                    $"Discord:AllowPrefixCommands='{discordSection["AllowPrefixCommands"] ?? "<null>"}'",
+                    $"Discord:Heartbeat:Enabled='{discordSection["Heartbeat:Enabled"] ?? "<null>"}'",
+                    $"Discord:Heartbeat:IntervalSeconds='{discordSection["Heartbeat:IntervalSeconds"] ?? "<null>"}'",
+                    $"Discord:Heartbeat:StartupDelaySeconds='{discordSection["Heartbeat:StartupDelaySeconds"] ?? "<null>"}'",
+                    $"Discord:Heartbeat:TimeoutSeconds='{discordSection["Heartbeat:TimeoutSeconds"] ?? "<null>"}'"
+                ]);
+
+            throw new InvalidOperationException(
+                $"Failed to bind 'Discord' configuration. Check numeric/boolean environment values. {diagnostics}",
+                ex);
+        }
+
         services.AddSingleton(botConfig);
 
         var socketConfig = new DiscordSocketConfig
