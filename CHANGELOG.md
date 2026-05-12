@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.9] - 2026-05-12
+
+### Changed
+
+* fix UEX item cache refresh to query items by required category filter
+
 ## [1.5.8] - 2026-05-12
 
 ### Changed

@@ -20,6 +20,7 @@ public class UEXItemService
     private readonly UEXConfig _config;
     private readonly IMemoryCache _cache;
     private readonly PandaBotContext _dbContext;
+    private const string CategoriesEndpoint = "/2.0/categories";
     private const string ItemsEndpoint = "/2.0/items";
     private const string ItemsPricesEndpoint = "/2.0/items_prices";
     private const string UexBadgeUrl = "https://uexcorp.space/img/api/uex-api-badge-powered.png";
@@ -485,21 +486,21 @@ public class UEXItemService
             _logger.LogInformation("Starting item cache refresh from UEX API");
             var startTime = DateTime.UtcNow;
 
-            var url = ItemsEndpoint;
-            var response = await _httpClient.GetAsync(url);
-            if (!response.IsSuccessStatusCode)
+            // UEX /items endpoint now requires filters; pull categories first and query per category.
+            var categoriesResponse = await _httpClient.GetAsync(CategoriesEndpoint);
+            if (!categoriesResponse.IsSuccessStatusCode)
             {
-                _logger.LogError("Failed to fetch items from UEX API: {StatusCode}", response.StatusCode);
+                _logger.LogError("Failed to fetch categories from UEX API: {StatusCode}", categoriesResponse.StatusCode);
                 return false;
             }
 
-            var content = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(content);
-            var root = doc.RootElement;
+            var categoriesContent = await categoriesResponse.Content.ReadAsStringAsync();
+            using var categoriesDoc = JsonDocument.Parse(categoriesContent);
+            var categoriesRoot = categoriesDoc.RootElement;
 
-            if (!root.TryGetProperty("data", out var dataArray) || dataArray.ValueKind != JsonValueKind.Array)
+            if (!categoriesRoot.TryGetProperty("data", out var categoriesArray) || categoriesArray.ValueKind != JsonValueKind.Array)
             {
-                _logger.LogError("Invalid response format from UEX API: missing or invalid 'data' array");
+                _logger.LogError("Invalid categories response format from UEX API: missing or invalid 'data' array");
                 return false;
             }
 
@@ -507,52 +508,80 @@ public class UEXItemService
             var updatedCount = 0;
             var createdCount = 0;
 
-            foreach (var itemElement in dataArray.EnumerateArray())
+            foreach (var categoryElement in categoriesArray.EnumerateArray())
             {
-                try
+                var categoryId = categoryElement.TryGetProperty("id", out var idValue) && idValue.TryGetInt32(out var parsedCategoryId)
+                    ? parsedCategoryId
+                    : 0;
+                if (categoryId <= 0)
                 {
-                    var itemId = itemElement.TryGetProperty("id", out var id) && id.TryGetInt32(out var idVal) ? idVal : 0;
-                    if (itemId == 0)
-                        continue;
-
-                    var name = itemElement.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-                    var category = itemElement.TryGetProperty("category", out var c) ? c.GetString() ?? "" : "";
-                    var company = itemElement.TryGetProperty("company_name", out var comp) ? comp.GetString() : null;
-
-                    if (string.IsNullOrWhiteSpace(name))
-                        continue;
-
-                    var existingCache = await _dbContext.UexItemCache
-                        .FirstOrDefaultAsync(i => i.UexItemId == itemId);
-
-                    if (existingCache != null)
-                    {
-                        existingCache.Name = name;
-                        existingCache.Category = category;
-                        existingCache.Company = company;
-                        existingCache.CachedAt = DateTime.UtcNow;
-                        _dbContext.UexItemCache.Update(existingCache);
-                        updatedCount++;
-                    }
-                    else
-                    {
-                        var cacheEntry = new ItemCache
-                        {
-                            UexItemId = itemId,
-                            Name = name,
-                            Category = category,
-                            Company = company,
-                            CachedAt = DateTime.UtcNow
-                        };
-                        _dbContext.UexItemCache.Add(cacheEntry);
-                        createdCount++;
-                    }
-
-                    itemCount++;
+                    continue;
                 }
-                catch (Exception ex)
+
+                var itemsUrl = $"{ItemsEndpoint}?id_category={categoryId}";
+                var itemsResponse = await _httpClient.GetAsync(itemsUrl);
+                if (!itemsResponse.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning(ex, "Error processing individual item from API response");
+                    _logger.LogWarning("Failed to fetch items for category {CategoryId} from UEX API: {StatusCode}", categoryId, itemsResponse.StatusCode);
+                    continue;
+                }
+
+                var itemsContent = await itemsResponse.Content.ReadAsStringAsync();
+                using var itemsDoc = JsonDocument.Parse(itemsContent);
+                var itemsRoot = itemsDoc.RootElement;
+                if (!itemsRoot.TryGetProperty("data", out var itemsArray) || itemsArray.ValueKind != JsonValueKind.Array)
+                {
+                    _logger.LogWarning("Invalid items response format from UEX API for category {CategoryId}", categoryId);
+                    continue;
+                }
+
+                foreach (var itemElement in itemsArray.EnumerateArray())
+                {
+                    try
+                    {
+                        var itemId = itemElement.TryGetProperty("id", out var id) && id.TryGetInt32(out var idVal) ? idVal : 0;
+                        if (itemId == 0)
+                            continue;
+
+                        var name = itemElement.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                        var category = itemElement.TryGetProperty("category", out var c) ? c.GetString() ?? "" : "";
+                        var company = itemElement.TryGetProperty("company_name", out var comp) ? comp.GetString() : null;
+
+                        if (string.IsNullOrWhiteSpace(name))
+                            continue;
+
+                        var existingCache = await _dbContext.UexItemCache
+                            .FirstOrDefaultAsync(i => i.UexItemId == itemId);
+
+                        if (existingCache != null)
+                        {
+                            existingCache.Name = name;
+                            existingCache.Category = category;
+                            existingCache.Company = company;
+                            existingCache.CachedAt = DateTime.UtcNow;
+                            _dbContext.UexItemCache.Update(existingCache);
+                            updatedCount++;
+                        }
+                        else
+                        {
+                            var cacheEntry = new ItemCache
+                            {
+                                UexItemId = itemId,
+                                Name = name,
+                                Category = category,
+                                Company = company,
+                                CachedAt = DateTime.UtcNow
+                            };
+                            _dbContext.UexItemCache.Add(cacheEntry);
+                            createdCount++;
+                        }
+
+                        itemCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error processing item from UEX API response for category {CategoryId}", categoryId);
+                    }
                 }
             }
 
