@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.7] - 2026-05-12
+
+### Changed
+
+* fix Star Citizen API requests by adding User-Agent header to all HTTP clients
+
 ## [1.5.6] - 2026-05-12
 
 ### Changed

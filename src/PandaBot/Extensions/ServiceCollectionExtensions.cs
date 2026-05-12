@@ -104,11 +104,26 @@ public static class ServiceCollectionExtensions
             // Add memory cache for UEX item/price caching and VerseTime location caching
             services.AddMemoryCache();
 
-            services.AddHttpClient<PandaBot.Services.StarCitizen.StarCitizenStatusService>();
-            services.AddHttpClient<PandaBot.Services.StarCitizen.UEXCommodityService>();
-            services.AddHttpClient<PandaBot.Services.StarCitizen.UEXItemService>();
-            services.AddHttpClient<PandaBot.Services.StarCitizen.UEXVehicleService>();
-            services.AddHttpClient<PandaBot.Services.StarCitizen.VerseTimeService>();
+            services.AddHttpClient<PandaBot.Services.StarCitizen.StarCitizenStatusService>(client =>
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", "PandaBot/1.0");
+            });
+            services.AddHttpClient<PandaBot.Services.StarCitizen.UEXCommodityService>(client =>
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", "PandaBot/1.0");
+            });
+            services.AddHttpClient<PandaBot.Services.StarCitizen.UEXItemService>(client =>
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", "PandaBot/1.0");
+            });
+            services.AddHttpClient<PandaBot.Services.StarCitizen.UEXVehicleService>(client =>
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", "PandaBot/1.0");
+            });
+            services.AddHttpClient<PandaBot.Services.StarCitizen.VerseTimeService>(client =>
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", "PandaBot/1.0");
+            });
 
             // Register hosted services to initialize caches on startup
             services.AddHostedService<PandaBot.Services.StarCitizen.UEXItemCacheInitializerService>();
