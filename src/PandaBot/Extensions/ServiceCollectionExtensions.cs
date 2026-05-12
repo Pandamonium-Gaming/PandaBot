@@ -40,6 +40,9 @@ public static class ServiceCollectionExtensions
                 ex);
         }
 
+        // Validate bound configuration values
+        botConfig.Validate();
+
         services.AddSingleton(botConfig);
 
         var socketConfig = new DiscordSocketConfig

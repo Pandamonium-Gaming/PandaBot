@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.6] - 2026-05-12
+
+### Changed
+
+* add config validation for input parameters and secrets
+
 ## [1.5.5] - 2026-05-12
 
 ### Changed
