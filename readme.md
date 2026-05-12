@@ -10,32 +10,32 @@ A feature-rich Discord bot for gaming communities. Provides information about se
 
 ### Game Status Modules (Configurable)
 
-- **Ashes of Creation** - Craft recipes, items, profession levels, and item search
-- **Star Citizen** - Server status and component health (🚀 enabled)
-- **Path of Exile** - Server status and component health (⚔️ enabled)
-- **Return of Reckoning** - Server status and player counts (enabled)
+* **Ashes of Creation** - Craft recipes, items, profession levels, and item search
+* **Star Citizen** - Server status and component health (🚀 enabled)
+* **Path of Exile** - Server status and component health (⚔️ enabled)
+* **Return of Reckoning** - Server status and player counts (enabled)
 
 Each module can be independently enabled/disabled via configuration.
 
 ### Core Commands
 
-- `/about` - Bot information (version, modules, commands, uptime)
-- `/help` - Command reference
-- `/ping` - Latency check
-- `/serverinfo` - Server information
-- `/userinfo` - User profile information
+* `/about` - Bot information (version, modules, commands, uptime)
+* `/help` - Command reference
+* `/ping` - Latency check
+* `/serverinfo` - Server information
+* `/userinfo` - User profile information
 
 ### Moderation Commands
 
-- `/warn` - Issue warnings
-- `/warnings` - Check user warnings
-- `/ban` - Ban users
-- `/kick` - Kick users
-- `/mute` / `/unmute` - Mute/unmute users
-- `/clear` - Clear messages
-- `/purgeuser` - Remove all messages from a user
-- `/lock` / `/unlock` - Lock/unlock channels
-- `/slowmode` - Enable channel slowmode
+* `/warn` - Issue warnings
+* `/warnings` - Check user warnings
+* `/ban` - Ban users
+* `/kick` - Kick users
+* `/mute` / `/unmute` - Mute/unmute users
+* `/clear` - Clear messages
+* `/purgeuser` - Remove all messages from a user
+* `/lock` / `/unlock` - Lock/unlock channels
+* `/slowmode` - Enable channel slowmode
 
 ## Development
 
@@ -51,8 +51,8 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development guidelines, includ
 
 **For AI Agents (GitHub Copilot, etc.):**
 
-- **Quick Reference:** [.github/copilot-instructions.md](.github/copilot-instructions.md) - Essential guidelines (auto-loaded by GitHub Copilot)
-- **Comprehensive Guide:** [AI_INSTRUCTIONS.md](AI_INSTRUCTIONS.md) - Complete development patterns, error handling, and workflows
+* **Quick Reference:** [.github/copilot-instructions.md](.github/copilot-instructions.md) - Essential guidelines (auto-loaded by GitHub Copilot)
+* **Comprehensive Guide:** [AI\_INSTRUCTIONS.md](AI_INSTRUCTIONS.md) - Complete development patterns, error handling, and workflows
 
 **Quick Setup:**
 
@@ -93,6 +93,31 @@ set PANDABOT_Discord__Token=your_discord_bot_token_here
 set PANDABOT_Discord__Prefix=!
 set PANDABOT_Discord__GuildId=1044558967545806940
 set PANDABOT_Discord__AllowPrefixCommands=false
+```
+
+#### Uptime Heartbeat Configuration
+
+```bash
+# Linux/Mac
+export PANDABOT_Discord__Heartbeat__Enabled=true
+export PANDABOT_Discord__Heartbeat__PushUrl="https://kuma.example.com/api/push/xxxxx"
+export PANDABOT_Discord__Heartbeat__IntervalSeconds=60
+export PANDABOT_Discord__Heartbeat__StartupDelaySeconds=15
+export PANDABOT_Discord__Heartbeat__TimeoutSeconds=10
+
+# Windows PowerShell
+$env:PANDABOT_Discord__Heartbeat__Enabled="true"
+$env:PANDABOT_Discord__Heartbeat__PushUrl="https://kuma.example.com/api/push/xxxxx"
+$env:PANDABOT_Discord__Heartbeat__IntervalSeconds="60"
+$env:PANDABOT_Discord__Heartbeat__StartupDelaySeconds="15"
+$env:PANDABOT_Discord__Heartbeat__TimeoutSeconds="10"
+
+# Windows CMD
+set PANDABOT_Discord__Heartbeat__Enabled=true
+set PANDABOT_Discord__Heartbeat__PushUrl=https://kuma.example.com/api/push/xxxxx
+set PANDABOT_Discord__Heartbeat__IntervalSeconds=60
+set PANDABOT_Discord__Heartbeat__StartupDelaySeconds=15
+set PANDABOT_Discord__Heartbeat__TimeoutSeconds=10
 ```
 
 #### Database Configuration
@@ -213,6 +238,24 @@ dotnet run
 * `GuildId` (ulong): Guild/Server ID for testing (optional)
 * `AllowPrefixCommands` (bool): Enable legacy prefix commands (default: `false`)
 * `AllowedFunChannels` (array): Channel IDs where fun commands are allowed
+* `Heartbeat.Enabled` (bool): Enable Uptime Kuma push heartbeats (default: `false`)
+* `Heartbeat.PushUrl` (string): Uptime Kuma push URL
+* `Heartbeat.IntervalSeconds` (int): Heartbeat interval (minimum enforced: `15`)
+* `Heartbeat.StartupDelaySeconds` (int): Delay before first heartbeat push
+* `Heartbeat.TimeoutSeconds` (int): HTTP timeout for heartbeat push
+
+### GitHub Secrets Mapping (If Using GitHub Actions Deploy)
+
+This repository currently has CI in `.github/workflows/dotnet.yml` and no deploy workflow committed. If you add a deploy workflow that writes a runtime `.env`, map secrets to these env vars:
+
+| GitHub Secret | Runtime Environment Variable |
+| --- | --- |
+| `DISCORD_TOKEN` | `PANDABOT_Discord__Token` |
+| `HEARTBEAT_ENABLED` | `PANDABOT_Discord__Heartbeat__Enabled` |
+| `HEARTBEAT_PUSH_URL` | `PANDABOT_Discord__Heartbeat__PushUrl` |
+| `HEARTBEAT_INTERVAL_SECONDS` | `PANDABOT_Discord__Heartbeat__IntervalSeconds` |
+| `HEARTBEAT_STARTUP_DELAY_SECONDS` | `PANDABOT_Discord__Heartbeat__StartupDelaySeconds` |
+| `HEARTBEAT_TIMEOUT_SECONDS` | `PANDABOT_Discord__Heartbeat__TimeoutSeconds` |
 
 ### ConnectionStrings Section
 

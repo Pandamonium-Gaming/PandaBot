@@ -41,6 +41,8 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddSingleton<DiscordBotService>();
+        services.AddHttpClient<HeartbeatMonitorService>();
+        services.AddHostedService<HeartbeatMonitorService>();
 
         // Load game modules configuration
         var gameModulesConfig = configuration.GetSection("GameModules").Get<GameModulesConfig>() ?? new GameModulesConfig();

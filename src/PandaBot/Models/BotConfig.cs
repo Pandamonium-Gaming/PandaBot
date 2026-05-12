@@ -6,4 +6,5 @@ public class BotConfig
     public string Prefix { get; set; } = "@";
     public ulong? GuildId { get; set; }
     public List<ulong> AllowedFunChannels { get; set; } = new List<ulong>();
+    public HeartbeatConfig Heartbeat { get; set; } = new();
 }

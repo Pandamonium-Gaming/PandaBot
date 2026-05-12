@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.3] - 2026-05-12
+
+### Changed
+
+* add configurable uptime heartbeat monitor
+
 ## \[1.5.2] - 2026-04-27
 
 ### PATCH
