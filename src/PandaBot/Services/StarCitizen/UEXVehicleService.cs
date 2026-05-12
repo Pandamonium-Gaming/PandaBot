@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using PandaBot.Core.Data;
+using PandaBot.Models;
 using PandaBot.Models.StarCitizen;
 using System.Globalization;
 using System.Text.Json;
@@ -10,23 +12,35 @@ namespace PandaBot.Services.StarCitizen;
 
 public class UEXVehicleService
 {
-    private const string VehiclesEndpoint = "https://api.uexcorp.uk/2.0/vehicles";
-    private const string VehiclesPricesEndpoint = "https://api.uexcorp.uk/2.0/vehicles_prices";
-    private const string VehiclesPurchasePricesEndpoint = "https://api.uexcorp.uk/2.0/vehicles_purchases_prices";
-    private const string VehiclesRentalPricesEndpoint = "https://api.uexcorp.uk/2.0/vehicles_rentals_prices";
+    private const string VehiclesEndpoint = "/2.0/vehicles";
+    private const string VehiclesPricesEndpoint = "/2.0/vehicles_prices";
+    private const string VehiclesPurchasePricesEndpoint = "/2.0/vehicles_purchases_prices";
+    private const string VehiclesRentalPricesEndpoint = "/2.0/vehicles_rentals_prices";
     private const int ItemCacheDurationMinutes = 1440; // 24 hours
     
     private readonly HttpClient _httpClient;
     private readonly PandaBotContext _dbContext;
     private readonly IMemoryCache _cache;
     private readonly ILogger<UEXVehicleService> _logger;
+    private readonly UEXConfig _config;
 
-    public UEXVehicleService(HttpClient httpClient, PandaBotContext dbContext, IMemoryCache cache, ILogger<UEXVehicleService> logger)
+    public UEXVehicleService(HttpClient httpClient, PandaBotContext dbContext, IMemoryCache cache, ILogger<UEXVehicleService> logger, IOptions<UEXConfig> config)
     {
         _httpClient = httpClient;
         _dbContext = dbContext;
         _cache = cache;
         _logger = logger;
+        _config = config.Value;
+
+        // Configure HttpClient with base address and timeout
+        _httpClient.BaseAddress = new Uri(_config.ApiBaseUrl ?? "https://api.uexcorp.uk");
+        _httpClient.Timeout = TimeSpan.FromSeconds(_config.TimeoutSeconds);
+
+        // Set up bearer token authentication if configured
+        if (!string.IsNullOrWhiteSpace(_config.BearerToken))
+        {
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_config.BearerToken}");
+        }
     }
 
     /// <summary>

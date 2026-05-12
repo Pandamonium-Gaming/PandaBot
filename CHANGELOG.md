@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.8] - 2026-05-12
+
+### Changed
+
+* fix UEXVehicleService to support bearer token authentication and configurable base URL
+
 ## [1.5.7] - 2026-05-12
 
 ### Changed
