@@ -111,6 +111,11 @@ jobs:
       env:
         DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
         UEX_BEARER_TOKEN: ${{ secrets.UEX_BEARER_TOKEN }}
+        HEARTBEAT_ENABLED: ${{ secrets.HEARTBEAT_ENABLED }}
+        HEARTBEAT_PUSH_URL: ${{ secrets.HEARTBEAT_PUSH_URL }}
+        HEARTBEAT_INTERVAL_SECONDS: ${{ secrets.HEARTBEAT_INTERVAL_SECONDS }}
+        HEARTBEAT_STARTUP_DELAY_SECONDS: ${{ secrets.HEARTBEAT_STARTUP_DELAY_SECONDS }}
+        HEARTBEAT_TIMEOUT_SECONDS: ${{ secrets.HEARTBEAT_TIMEOUT_SECONDS }}
       run: |
         printf '%s\n' \
           "PANDABOT_Discord__Token=$DISCORD_TOKEN" \
@@ -120,7 +125,12 @@ jobs:
           "PANDABOT_AshesForge__EnableImageCaching=true" \
           "PANDABOT_UEX__BearerToken=$UEX_BEARER_TOKEN" \
           "PANDABOT_UEX__ApiBaseUrl=https://api.uexcorp.uk" \
-          "PANDABOT_UEX__TimeoutSeconds=30" > /tmp/pandabot.env
+          "PANDABOT_UEX__TimeoutSeconds=30" \
+          "PANDABOT_Discord__Heartbeat__Enabled=${HEARTBEAT_ENABLED:-false}" \
+          "PANDABOT_Discord__Heartbeat__PushUrl=$HEARTBEAT_PUSH_URL" \
+          "PANDABOT_Discord__Heartbeat__IntervalSeconds=${HEARTBEAT_INTERVAL_SECONDS:-60}" \
+          "PANDABOT_Discord__Heartbeat__StartupDelaySeconds=${HEARTBEAT_STARTUP_DELAY_SECONDS:-15}" \
+          "PANDABOT_Discord__Heartbeat__TimeoutSeconds=${HEARTBEAT_TIMEOUT_SECONDS:-10}" > /tmp/pandabot.env
         scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no /tmp/pandabot.env ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/pandabot.env
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
           "sudo mv /tmp/pandabot.env ${{ env.DEPLOY_PATH }}/.env && sudo chmod 600 ${{ env.DEPLOY_PATH }}/.env"
@@ -134,7 +144,20 @@ jobs:
     - name: Check service status
       run: |
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-          "sudo systemctl status pandabot.service --no-pager"
+          "ok=0; \
+           for i in \$(seq 1 20); do \
+             ACTIVE=\$(sudo systemctl is-active pandabot.service || true); \
+             SUB=\$(sudo systemctl show -p SubState --value pandabot.service || true); \
+             echo \"Attempt \$i: active=\$ACTIVE substate=\$SUB\"; \
+             if [ \"\$ACTIVE\" = \"active\" ] && [ \"\$SUB\" = \"running\" ]; then \
+               ok=1; \
+               break; \
+             fi; \
+             sleep 3; \
+           done; \
+           sudo systemctl status pandabot.service --no-pager || true; \
+           sudo journalctl -u pandabot.service -n 80 --no-pager || true; \
+           [ \"\$ok\" -eq 1 ]"
 
     - name: Cleanup SSH key
       if: always()

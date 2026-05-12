@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.4] - 2026-05-12
+
+### Changed
+
+* wire heartbeat deploy secrets and harden service health checks
+
 ## [1.5.3] - 2026-05-12
 
 ### Changed
