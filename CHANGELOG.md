@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.12] - 2026-05-13
+
+### Changed
+
+* Send startup and shutdown heartbeat pings for smoother redeploys
+
 ## [1.5.11] - 2026-05-13
 
 ### Changed
