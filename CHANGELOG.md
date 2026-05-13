@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.13] - 2026-05-13
+
+### Changed
+
+* Suppress empty Discord gateway noise events
+
 ## [1.5.12] - 2026-05-13
 
 ### Changed
