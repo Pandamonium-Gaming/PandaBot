@@ -531,7 +531,24 @@ public class UEXItemService
                 var itemsRoot = itemsDoc.RootElement;
                 if (!itemsRoot.TryGetProperty("data", out var itemsArray) || itemsArray.ValueKind != JsonValueKind.Array)
                 {
-                    _logger.LogWarning("Invalid items response format from UEX API for category {CategoryId}", categoryId);
+                    var message = itemsRoot.TryGetProperty("message", out var messageValue)
+                        ? messageValue.GetString()
+                        : null;
+
+                    // Some categories legitimately return no items and omit the data array.
+                    // Keep this low-noise while still surfacing truly unexpected payloads.
+                    if (!string.IsNullOrWhiteSpace(message) &&
+                        (message.Contains("no item", StringComparison.OrdinalIgnoreCase) ||
+                         message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+                         message.Contains("empty", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        _logger.LogDebug("UEX returned no items for category {CategoryId}: {ApiMessage}", categoryId, message);
+                    }
+                    else
+                    {
+                        var payloadPreview = itemsContent.Length > 220 ? itemsContent[..220] + "..." : itemsContent;
+                        _logger.LogWarning("Unexpected items response format from UEX API for category {CategoryId}. Message: {ApiMessage}. Payload: {PayloadPreview}", categoryId, message ?? "(none)", payloadPreview);
+                    }
                     continue;
                 }
 

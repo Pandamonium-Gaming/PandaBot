@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.10] - 2026-05-13
+
+### Changed
+
+* Reduce noisy UEX category format warning handling
+
 ## [1.5.9] - 2026-05-12
 
 ### Changed
