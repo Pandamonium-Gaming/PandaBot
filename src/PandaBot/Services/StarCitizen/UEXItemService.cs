@@ -507,6 +507,11 @@ public class UEXItemService
             var itemCount = 0;
             var updatedCount = 0;
             var createdCount = 0;
+            var categoriesScanned = 0;
+            var categoriesWithItems = 0;
+            var categoriesEmpty = 0;
+            var categoriesMalformed = 0;
+            var categoriesFetchFailed = 0;
 
             foreach (var categoryElement in categoriesArray.EnumerateArray())
             {
@@ -518,10 +523,13 @@ public class UEXItemService
                     continue;
                 }
 
+                categoriesScanned++;
+
                 var itemsUrl = $"{ItemsEndpoint}?id_category={categoryId}";
                 var itemsResponse = await _httpClient.GetAsync(itemsUrl);
                 if (!itemsResponse.IsSuccessStatusCode)
                 {
+                    categoriesFetchFailed++;
                     _logger.LogWarning("Failed to fetch items for category {CategoryId} from UEX API: {StatusCode}", categoryId, itemsResponse.StatusCode);
                     continue;
                 }
@@ -546,15 +554,26 @@ public class UEXItemService
                           message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
                           message.Contains("empty", StringComparison.OrdinalIgnoreCase))))
                     {
+                        categoriesEmpty++;
                         _logger.LogDebug("UEX returned no items for category {CategoryId}: {ApiMessage}", categoryId, message);
                     }
                     else
                     {
+                        categoriesMalformed++;
                         var payloadPreview = itemsContent.Length > 220 ? itemsContent[..220] + "..." : itemsContent;
                         _logger.LogWarning("Unexpected items response format from UEX API for category {CategoryId}. Message: {ApiMessage}. Payload: {PayloadPreview}", categoryId, message ?? "(none)", payloadPreview);
                     }
                     continue;
                 }
+
+                if (itemsArray.GetArrayLength() == 0)
+                {
+                    categoriesEmpty++;
+                    _logger.LogDebug("UEX returned an empty items array for category {CategoryId}", categoryId);
+                    continue;
+                }
+
+                categoriesWithItems++;
 
                 foreach (var itemElement in itemsArray.EnumerateArray())
                 {
@@ -610,13 +629,30 @@ public class UEXItemService
             {
                 await _dbContext.SaveChangesAsync();
                 var elapsed = DateTime.UtcNow - startTime;
-                _logger.LogInformation("Item cache refresh completed: {TotalCount} items processed ({CreatedCount} created, {UpdatedCount} updated) in {ElapsedSeconds:F2}s",
-                    itemCount, createdCount, updatedCount, elapsed.TotalSeconds);
+                _logger.LogInformation(
+                    "Item cache refresh completed: {TotalCount} items processed ({CreatedCount} created, {UpdatedCount} updated) in {ElapsedSeconds:F2}s. Categories scanned={CategoriesScanned}, withItems={CategoriesWithItems}, empty={CategoriesEmpty}, malformed={CategoriesMalformed}, fetchFailed={CategoriesFetchFailed}",
+                    itemCount,
+                    createdCount,
+                    updatedCount,
+                    elapsed.TotalSeconds,
+                    categoriesScanned,
+                    categoriesWithItems,
+                    categoriesEmpty,
+                    categoriesMalformed,
+                    categoriesFetchFailed);
                 return true;
             }
             else
             {
-                _logger.LogWarning("No items found in API response");
+                var elapsed = DateTime.UtcNow - startTime;
+                _logger.LogWarning(
+                    "No items found in API response. Categories scanned={CategoriesScanned}, withItems={CategoriesWithItems}, empty={CategoriesEmpty}, malformed={CategoriesMalformed}, fetchFailed={CategoriesFetchFailed}, elapsedSeconds={ElapsedSeconds:F2}",
+                    categoriesScanned,
+                    categoriesWithItems,
+                    categoriesEmpty,
+                    categoriesMalformed,
+                    categoriesFetchFailed,
+                    elapsed.TotalSeconds);
                 return false;
             }
         }
