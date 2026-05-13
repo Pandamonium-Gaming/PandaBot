@@ -535,12 +535,16 @@ public class UEXItemService
                         ? messageValue.GetString()
                         : null;
 
+                    var hasDataProperty = itemsRoot.TryGetProperty("data", out var dataValue);
+                    var isExplicitEmptyData = hasDataProperty && dataValue.ValueKind == JsonValueKind.Null;
+
                     // Some categories legitimately return no items and omit the data array.
                     // Keep this low-noise while still surfacing truly unexpected payloads.
-                    if (!string.IsNullOrWhiteSpace(message) &&
-                        (message.Contains("no item", StringComparison.OrdinalIgnoreCase) ||
-                         message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
-                         message.Contains("empty", StringComparison.OrdinalIgnoreCase)))
+                    if (isExplicitEmptyData ||
+                        (!string.IsNullOrWhiteSpace(message) &&
+                         (message.Contains("no item", StringComparison.OrdinalIgnoreCase) ||
+                          message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+                          message.Contains("empty", StringComparison.OrdinalIgnoreCase))))
                     {
                         _logger.LogDebug("UEX returned no items for category {CategoryId}: {ApiMessage}", categoryId, message);
                     }

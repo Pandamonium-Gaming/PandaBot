@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.11] - 2026-05-13
+
+### Changed
+
+* Treat UEX data-null category payloads as empty results
+
 ## [1.5.10] - 2026-05-13
 
 ### Changed
