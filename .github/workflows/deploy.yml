@@ -126,7 +126,7 @@ jobs:
       run: |
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
           "sudo -n chown -R pandabot:pandabot ${{ env.DEPLOY_PATH }} && \
-           chmod +x ${{ env.DEPLOY_PATH }}/PandaBot"
+           sudo -n chmod +x ${{ env.DEPLOY_PATH }}/PandaBot"
 
     - name: Start bot service
       run: |

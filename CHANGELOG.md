@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.25] - 2026-05-14
+
+### Changed
+
+* Fix deploy chmod step to run under sudo
+
 ## [1.5.24] - 2026-05-14
 
 ### Changed
