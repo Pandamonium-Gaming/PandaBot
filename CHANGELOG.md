@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.18] - 2026-05-14
+
+### Changed
+
+* Harden deploy preflight permissions for deploy path
+
 ## [1.5.17] - 2026-05-14
 
 ### Changed

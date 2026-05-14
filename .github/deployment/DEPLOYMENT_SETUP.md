@@ -13,15 +13,15 @@ This guide covers setting up PandaBot on a DigitalOcean droplet (or any Linux ho
 ### 1. Create Deployment User
 
 ```bash
-sudo useradd -m -s /bin/bash deployment
-sudo usermod -aG sudo deployment
+sudo useradd -m -s /bin/bash deployer
+sudo usermod -aG sudo deployer
 ```
 
 ### 2. Setup Directory Structure
 
 ```bash
 sudo mkdir -p /opt/pandabot
-sudo chown deployment:deployment /opt/pandabot
+sudo chown deployer:deployer /opt/pandabot
 ```
 
 ### 3. Create `.env` File
@@ -77,7 +77,7 @@ The GitHub Actions workflow handles:
 
 Set these in your repository settings (Settings → Secrets and variables → Actions):
 
-* `DEPLOY_SSH_KEY`: Private SSH key for deployment user
+* `DEPLOY_SSH_KEY`: Private SSH key for deployer user
 * `DEPLOY_HOST`: IP/hostname of your Digital Ocean droplet
 * `DISCORD_TOKEN`: Your Discord bot token
 * `UEX_BEARER_TOKEN`: (Optional) UEX API bearer token for Star Citizen features
@@ -112,7 +112,7 @@ Update the workflow in `.github/workflows/deploy.yml` and push to main branch. A
 ### Option 2: Manual SSH
 
 ```bash
-ssh deployment@your-host
+ssh deployer@your-host
 sudo nano /opt/pandabot/.env
 # Edit the file, save and exit
 sudo systemctl restart pandabot.service
@@ -136,7 +136,7 @@ ls -la /opt/pandabot/.env
 ### Permission denied errors
 
 ```bash
-sudo chown -R deployment:deployment /opt/pandabot
+sudo chown -R deployer:deployer /opt/pandabot
 ```
 
 ### Check if .NET is installed
