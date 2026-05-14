@@ -2,6 +2,10 @@
 
 Essential guidelines for AI code generation on this project. See [AI\_INSTRUCTIONS.md](../AI_INSTRUCTIONS.md) for comprehensive documentation.
 
+## Command Formatting
+
+When providing terminal commands to users, always wrap commands in fenced code blocks.
+
 **⚠️ ENVIRONMENT NOTE:** This project runs on **Windows with PowerShell**. Always use PowerShell cmdlets instead of Unix/Linux commands (e.g., use `Get-ChildItem` instead of `ls`, `Get-Content -Tail` instead of `tail`, `Remove-Item` instead of `rm`). Refer to [AI\_INSTRUCTIONS.md](../AI_INSTRUCTIONS.md#powershell-commands) for command equivalents.
 
 ## CRITICAL: Version Management
@@ -51,7 +55,7 @@ Important:
 
 Use Conventional Commits:
 
-```
+```text
 type(scope): description
 ```
 
@@ -125,7 +129,7 @@ catch (Exception ex)
 
 ## File Organization
 
-```
+```text
 src/PandaBot/
 ├── Models/YourGame/          # Data models
 ├── Services/YourGame/        # Business logic
