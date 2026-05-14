@@ -54,6 +54,10 @@ Test-Path filename.txt
 
 > **CRITICAL:** Always use VersionManager tool for version changes
 
+Only require a version bump when changes affect shipped bot runtime behavior (for example, code under `src/PandaBot/`, runtime configuration behavior, commands, services, or user-visible functionality).
+
+Do not require a version bump for workflow/CI-only, deployment-only, docs-only, tests-only, or tooling-only changes that do not change bot runtime behavior.
+
 Never manually edit `PandaBot.csproj` or `CHANGELOG.md` version numbers.
 
 ### Version Bump Workflow
@@ -109,7 +113,7 @@ dotnet artifacts/bin/VersionManager/release/VersionManager.dll bump --version 2.
 * **Always build release first:** The VersionManager must be compiled as Release before use
 * **Use the built .dll:** Execute from `artifacts/bin/VersionManager/release/VersionManager.dll`, not via `dotnet run`
 * **CHANGELOG consistency:** Verify CHANGELOG.md uses consistent formatting (e.g., `### Fixed`, `### Added` with bullet points)
-* **Increment PandaBot version:** Always keep version numbers in sync between .csproj and CHANGELOG.md
+* **Increment PandaBot version:** Keep version numbers in sync between .csproj and CHANGELOG.md whenever a runtime behavior change requires a bump
 
 ## Commit Messages
 
