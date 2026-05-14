@@ -20,6 +20,7 @@ Directory.CreateDirectory(logsDir);
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
+    .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)
     .WriteTo.Console()
     .WriteTo.File(Path.Combine(logsDir, "pandabot-.log"), 
         rollingInterval: RollingInterval.Day,
@@ -51,6 +52,8 @@ try
                     logging.ClearProviders();
                     logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
                     logging.AddFilter("Microsoft.EntityFrameworkCore.Query", LogLevel.Warning);
+                    logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
+                    logging.AddFilter("System.Net.Http.HttpClient.Default", LogLevel.Warning);
                     logging.AddSerilog();
                 })
                 .Build();

@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.29] - 2026-05-14
+
+### Changed
+
+* Suppress noisy HttpClient info logs
+
 ## [1.5.28] - 2026-05-14
 
 ### Changed
