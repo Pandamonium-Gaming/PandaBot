@@ -4,15 +4,15 @@ Essential guidelines for AI code generation on this project. See [AI\_INSTRUCTIO
 
 **⚠️ ENVIRONMENT NOTE:** This project runs on **Windows with PowerShell**. Always use PowerShell cmdlets instead of Unix/Linux commands (e.g., use `Get-ChildItem` instead of `ls`, `Get-Content -Tail` instead of `tail`, `Remove-Item` instead of `rm`). Refer to [AI\_INSTRUCTIONS.md](../AI_INSTRUCTIONS.md#powershell-commands) for command equivalents.
 
-## 🔴 CRITICAL: Version Management
+## CRITICAL: Version Management
 
-**NEVER manually edit `src/PandaBot/PandaBot.csproj` or `CHANGELOG.md` versions.**
+Never manually edit `src/PandaBot/PandaBot.csproj` version or `CHANGELOG.md` version entries.
 
 Use VersionManager when changes affect shipped bot runtime behavior (for example, code under `src/PandaBot/`, runtime configuration behavior, commands, services, or user-visible functionality).
 
 Do not require a version bump for workflow/CI-only, deployment-only, docs-only, tests-only, or tooling-only changes that do not change bot runtime behavior.
 
-When a version bump is required, use VersionManager. The tool MUST be built before use:
+When a version bump is required, use the VersionManager tool. Build it before use:
 
 ```bash
 # Step 1: Build VersionManager as Release
@@ -32,27 +32,32 @@ dotnet artifacts/bin/VersionManager/release/VersionManager.dll validate
 dotnet build
 ```
 
-**Git-Aware Version Tracking:** The VersionManager now analyzes your git commits since the last version tag and warns if your version bump doesn't match the conventional commits. Use `check-commits` before bumping to ensure accuracy:
+Git-aware version tracking: The VersionManager analyzes git commits since the last version tag and warns if your version bump does not match conventional commits. Use `check-commits` before bumping to ensure accuracy:
 
-* **BREAKING changes** → Major version bump required
-* **feat commits** → Minor version bump required
-* **fix commits** → Patch version bump required
+* **BREAKING changes** → major version bump required
+* **feat commits** → minor version bump required
+* **fix commits** → patch version bump required
 
-**Automatic Build Validation:** 🚀 The build process automatically validates version consistency. If `PandaBot.csproj` version doesn't match `CHANGELOG.md` version, the build **WILL FAIL**. This prevents accidental version mismatches.
+Build validation enforces version consistency. If `PandaBot.csproj` and `CHANGELOG.md` versions differ, build fails.
 
-**Important:** ✅ Increment PandaBot version when runtime behavior changes are shipped. ✅ Use `check-commits` to ensure version bump aligns with actual commits. ✅ Verify CHANGELOG formatting is consistent (use `### Fixed`, `### Added`, etc. with bullet points, not dashes). ✅ Never commit code that breaks the build due to version mismatch.
+Important:
+
+* Increment PandaBot version when runtime behavior changes are shipped.
+* Use `check-commits` to ensure version bump aligns with actual commits.
+* Verify CHANGELOG formatting is consistent (use `### Fixed`, `### Added`, etc. with bullet points, not dashes).
+* Never commit code that breaks the build due to version mismatch.
 
 ## Commit Message Format
 
-Use [Conventional Commits](https://www.conventionalcommits.org/):
+Use Conventional Commits:
 
 ```
 type(scope): description
 ```
 
-**Types:** `feat` (new feature), `fix` (bug fix), `refactor`, `chore`, `docs`
+Types: `feat`, `fix`, `refactor`, `chore`, `docs`
 
-**Example:** `feat(ror): add web scraper for server status`
+Example: `feat(ror): add web scraper for server status`
 
 ## Build Verification
 
