@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.20] - 2026-05-14
+
+### Changed
+
+* Harden deploy SSH key parsing for CI secrets
+
 ## [1.5.19] - 2026-05-14
 
 ### Changed
