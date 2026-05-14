@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.24] - 2026-05-14
+
+### Changed
+
+* Make deploy preflight sudo-compatible and disable rsync timestamp preservation
+
 ## [1.5.23] - 2026-05-14
 
 ### Changed
