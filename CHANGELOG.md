@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.27] - 2026-05-14
+
+### Changed
+
+* Reduce EF Core SQL command log verbosity for UEX operations
+
 ## [1.5.26] - 2026-05-14
 
 ### Changed

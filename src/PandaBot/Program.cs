@@ -49,6 +49,8 @@ try
                 .ConfigureLogging(logging =>
                 {
                     logging.ClearProviders();
+                    logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+                    logging.AddFilter("Microsoft.EntityFrameworkCore.Query", LogLevel.Warning);
                     logging.AddSerilog();
                 })
                 .Build();
