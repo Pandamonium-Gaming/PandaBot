@@ -133,9 +133,9 @@ public class DiscordBotService
                                 string.Equals(log.Message, "null", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(log.Message, "(empty message)", StringComparison.OrdinalIgnoreCase);
 
-        // Discord gateway can emit empty messages without exceptions during reconnects.
-        // Suppress these noisy events to avoid false warning/error spikes.
-        if (isGateway && isNullLikeMessage && log.Exception is null)
+        // Discord gateway can emit empty messages during reconnects.
+        // Suppress these noisy events regardless of severity/exception attachment.
+        if (isGateway && isNullLikeMessage)
         {
             return Task.CompletedTask;
         }
@@ -151,7 +151,8 @@ public class DiscordBotService
             _ => LogLevel.Information
         };
 
-        _logger.Log(logLevel, log.Exception, "{Source}: {Message}", log.Source, log.Message);
+        var message = string.IsNullOrWhiteSpace(log.Message) ? "(empty message)" : log.Message;
+        _logger.Log(logLevel, log.Exception, "[{BotName}] {Source}: {Message}", "PandaBot", log.Source, message);
         return Task.CompletedTask;
     }
 
