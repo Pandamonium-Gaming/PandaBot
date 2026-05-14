@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.31] - 2026-05-14
+
+### Changed
+
+* Suppress EF Core SQL command logs at Serilog level
+
 ## [1.5.30] - 2026-05-14
 
 ### Changed
