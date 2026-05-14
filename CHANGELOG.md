@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.16] - 2026-05-14
+
+### Changed
+
+* Align CI and deploy workflows with Halo pattern
+
 ## [1.5.15] - 2026-05-14
 
 ### Changed
