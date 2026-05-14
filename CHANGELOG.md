@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.14] - 2026-05-14
+
+### Changed
+
+* Suppress gateway placeholder log noise more robustly
+
 ## [1.5.13] - 2026-05-13
 
 ### Changed
