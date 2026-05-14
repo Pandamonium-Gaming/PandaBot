@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.28] - 2026-05-14
+
+### Changed
+
+* Reduce UEX category fetch warning noise for transient server errors
+
 ## [1.5.27] - 2026-05-14
 
 ### Changed

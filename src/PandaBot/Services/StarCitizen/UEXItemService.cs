@@ -512,6 +512,8 @@ public class UEXItemService
             var categoriesEmpty = 0;
             var categoriesMalformed = 0;
             var categoriesFetchFailed = 0;
+            var categoriesFetchFailedServerError = 0;
+            var categoriesFetchFailedClientOrOther = 0;
 
             foreach (var categoryElement in categoriesArray.EnumerateArray())
             {
@@ -530,7 +532,19 @@ public class UEXItemService
                 if (!itemsResponse.IsSuccessStatusCode)
                 {
                     categoriesFetchFailed++;
-                    _logger.LogWarning("Failed to fetch items for category {CategoryId} from UEX API: {StatusCode}", categoryId, itemsResponse.StatusCode);
+                    var statusCodeInt = (int)itemsResponse.StatusCode;
+                    if (statusCodeInt >= 500)
+                    {
+                        categoriesFetchFailedServerError++;
+                        // UEX occasionally returns transient 5xx responses for category endpoints.
+                        // Keep this low-noise and rely on aggregate refresh summary for signal.
+                        _logger.LogDebug("UEX transient server error fetching category {CategoryId}: {StatusCode}", categoryId, itemsResponse.StatusCode);
+                    }
+                    else
+                    {
+                        categoriesFetchFailedClientOrOther++;
+                        _logger.LogWarning("Failed to fetch items for category {CategoryId} from UEX API: {StatusCode}", categoryId, itemsResponse.StatusCode);
+                    }
                     continue;
                 }
 
@@ -630,7 +644,7 @@ public class UEXItemService
                 await _dbContext.SaveChangesAsync();
                 var elapsed = DateTime.UtcNow - startTime;
                 _logger.LogInformation(
-                    "Item cache refresh completed: {TotalCount} items processed ({CreatedCount} created, {UpdatedCount} updated) in {ElapsedSeconds:F2}s. Categories scanned={CategoriesScanned}, withItems={CategoriesWithItems}, empty={CategoriesEmpty}, malformed={CategoriesMalformed}, fetchFailed={CategoriesFetchFailed}",
+                    "Item cache refresh completed: {TotalCount} items processed ({CreatedCount} created, {UpdatedCount} updated) in {ElapsedSeconds:F2}s. Categories scanned={CategoriesScanned}, withItems={CategoriesWithItems}, empty={CategoriesEmpty}, malformed={CategoriesMalformed}, fetchFailed={CategoriesFetchFailed} (serverError={CategoriesFetchFailedServerError}, clientOrOther={CategoriesFetchFailedClientOrOther})",
                     itemCount,
                     createdCount,
                     updatedCount,
@@ -639,19 +653,23 @@ public class UEXItemService
                     categoriesWithItems,
                     categoriesEmpty,
                     categoriesMalformed,
-                    categoriesFetchFailed);
+                    categoriesFetchFailed,
+                    categoriesFetchFailedServerError,
+                    categoriesFetchFailedClientOrOther);
                 return true;
             }
             else
             {
                 var elapsed = DateTime.UtcNow - startTime;
                 _logger.LogWarning(
-                    "No items found in API response. Categories scanned={CategoriesScanned}, withItems={CategoriesWithItems}, empty={CategoriesEmpty}, malformed={CategoriesMalformed}, fetchFailed={CategoriesFetchFailed}, elapsedSeconds={ElapsedSeconds:F2}",
+                    "No items found in API response. Categories scanned={CategoriesScanned}, withItems={CategoriesWithItems}, empty={CategoriesEmpty}, malformed={CategoriesMalformed}, fetchFailed={CategoriesFetchFailed} (serverError={CategoriesFetchFailedServerError}, clientOrOther={CategoriesFetchFailedClientOrOther}), elapsedSeconds={ElapsedSeconds:F2}",
                     categoriesScanned,
                     categoriesWithItems,
                     categoriesEmpty,
                     categoriesMalformed,
                     categoriesFetchFailed,
+                    categoriesFetchFailedServerError,
+                    categoriesFetchFailedClientOrOther,
                     elapsed.TotalSeconds);
                 return false;
             }
