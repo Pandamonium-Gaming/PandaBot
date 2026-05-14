@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.22] - 2026-05-14
+
+### Changed
+
+* Fix preflight chown to recursively change ownership of all deploy subdirectories
+
+## [1.5.21] - 2026-05-14
+
+### Changed
+
+* Skip rsync timestamp preservation to avoid permission errors on host-owned files
+
 ## [1.5.20] - 2026-05-14
 
 ### Changed
