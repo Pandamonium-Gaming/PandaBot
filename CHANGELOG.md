@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.23] - 2026-05-14
+
+### Changed
+
+* Validate decoded deploy SSH secret is a private key and normalize CRLF
+
 ## [1.5.22] - 2026-05-14
 
 ### Changed
