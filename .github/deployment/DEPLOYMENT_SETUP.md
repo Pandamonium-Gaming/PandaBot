@@ -107,7 +107,7 @@ sudo systemctl start pandabot.service
 
 ### Option 1: Via Deployment
 
-Update the workflow in `.github/workflows/dotnet.yml` and push to main branch. All keys in the generated `.env` must use the `PANDABOT_` prefix to be picked up by the app.
+Update the workflow in `.github/workflows/deploy.yml` and push to main branch. All keys in the generated `.env` must use the `PANDABOT_` prefix to be picked up by the app.
 
 ### Option 2: Manual SSH
 

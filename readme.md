@@ -1,6 +1,6 @@
 # PandaBot
 
-[![Build and Deploy](https://github.com/Pandamonium-Gaming/PandaBot/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Pandamonium-Gaming/PandaBot/actions/workflows/dotnet.yml)
+[![.NET CI](https://github.com/Pandamonium-Gaming/PandaBot/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Pandamonium-Gaming/PandaBot/actions/workflows/dotnet.yml)
 
 A feature-rich Discord bot for gaming communities. Provides information about server statuses, game recipes, moderation tools, and community features.
 
@@ -246,7 +246,7 @@ dotnet run
 
 ### GitHub Secrets Mapping (If Using GitHub Actions Deploy)
 
-This repository currently has CI in `.github/workflows/dotnet.yml` and no deploy workflow committed. If you add a deploy workflow that writes a runtime `.env`, map secrets to these env vars:
+This repository uses `.github/workflows/dotnet.yml` for CI and `.github/workflows/deploy.yml` for deployment. The deploy workflow writes a runtime `.env` using these env vars:
 
 | GitHub Secret | Runtime Environment Variable |
 | --- | --- |

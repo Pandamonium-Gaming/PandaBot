@@ -1,0 +1,130 @@
+name: Deploy to Digital Ocean
+
+on:
+  workflow_run:
+    workflows: [".NET CI"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.203'
+  PROJECT_PATH: 'src/PandaBot/PandaBot.csproj'
+  DEPLOY_USER: 'deployer'
+  DEPLOY_PATH: '/opt/pandabot'
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+
+    - name: Build VersionManager (Release)
+      run: dotnet build "$GITHUB_WORKSPACE/tools/VersionManager/VersionManager.csproj" --configuration Release
+
+    - name: Build
+      env:
+        UEX__BearerToken: ${{ secrets.UEX_BEARER_TOKEN }}
+      run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+
+    - name: Publish
+      run: dotnet publish ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ./publish
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Preflight host permissions
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "mkdir -p ${{ env.DEPLOY_PATH }} && test -w ${{ env.DEPLOY_PATH }}"
+
+    - name: Stop bot service
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo -n systemctl stop pandabot.service || true"
+
+    - name: Deploy files
+      run: |
+        # Preserve runtime SQLite files that live in the deployment directory.
+        rsync -avz --delete --exclude='*.db' --exclude='*.db-shm' --exclude='*.db-wal' -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+          ./publish/ ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ env.DEPLOY_PATH }}/
+
+    - name: Deploy systemd service file
+      run: |
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no .github/deployment/pandabot.service ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/pandabot.service
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo -n mv /tmp/pandabot.service /etc/systemd/system/pandabot.service && sudo -n systemctl daemon-reload"
+
+    - name: Write .env file from secrets
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo -n tee ${{ env.DEPLOY_PATH }}/.env > /dev/null << 'ENVEOF'
+        PANDABOT_Discord__Token=${{ secrets.DISCORD_TOKEN }}
+        PANDABOT_Discord__Prefix=!
+        PANDABOT_ConnectionStrings__DefaultConnection=Data Source=${{ env.DEPLOY_PATH }}/pandabot.db
+        PANDABOT_AshesForge__CacheExpirationHours=24
+        PANDABOT_AshesForge__EnableImageCaching=true
+        PANDABOT_UEX__BearerToken=${{ secrets.UEX_BEARER_TOKEN }}
+        PANDABOT_UEX__ApiBaseUrl=https://api.uexcorp.uk
+        PANDABOT_UEX__TimeoutSeconds=30
+        PANDABOT_Discord__Heartbeat__Enabled=${{ secrets.HEARTBEAT_ENABLED || 'false' }}
+        PANDABOT_Discord__Heartbeat__PushUrl=${{ secrets.HEARTBEAT_PUSH_URL }}
+        PANDABOT_Discord__Heartbeat__IntervalSeconds=${{ secrets.HEARTBEAT_INTERVAL_SECONDS || '60' }}
+        PANDABOT_Discord__Heartbeat__StartupDelaySeconds=${{ secrets.HEARTBEAT_STARTUP_DELAY_SECONDS || '15' }}
+        PANDABOT_Discord__Heartbeat__TimeoutSeconds=${{ secrets.HEARTBEAT_TIMEOUT_SECONDS || '10' }}
+        ENVEOF
+        sudo -n chown pandabot:pandabot ${{ env.DEPLOY_PATH }}/.env
+        sudo -n chmod 600 ${{ env.DEPLOY_PATH }}/.env"
+
+    - name: Set permissions
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo -n chown -R pandabot:pandabot ${{ env.DEPLOY_PATH }} && \
+           chmod +x ${{ env.DEPLOY_PATH }}/PandaBot"
+
+    - name: Start bot service
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "sudo -n systemctl start pandabot.service"
+
+    - name: Check service status
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          "ok=0; \
+           for i in \$(seq 1 20); do \
+             ACTIVE=\$(sudo -n systemctl is-active pandabot.service || true); \
+             SUB=\$(sudo -n systemctl show -p SubState --value pandabot.service || true); \
+             echo \"Attempt \$i: active=\$ACTIVE substate=\$SUB\"; \
+             if [ \"\$ACTIVE\" = \"active\" ] && [ \"\$SUB\" = \"running\" ]; then \
+               ok=1; \
+               break; \
+             fi; \
+             sleep 3; \
+           done; \
+           sudo -n systemctl status pandabot.service --no-pager || true; \
+           sudo -n systemctl show pandabot.service -p ActiveState,SubState,ExecMainStatus,ExecMainCode,Result --no-pager || true; \
+           sudo -n journalctl -u pandabot.service -n 200 --no-pager || true; \
+           [ \"\$ok\" -eq 1 ]"
+
+    - name: Cleanup SSH key
+      if: always()
+      run: rm -f ~/.ssh/deploy_key
