@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.19] - 2026-05-14
+
+### Changed
+
+* Fix rsync group metadata deploy failures
+
 ## [1.5.18] - 2026-05-14
 
 ### Changed
