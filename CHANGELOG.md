@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.15] - 2026-05-14
+
+### Changed
+
+* Add Discord lifecycle observability and readiness hardening
+
 ## [1.5.14] - 2026-05-14
 
 ### Changed

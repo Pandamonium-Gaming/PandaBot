@@ -33,6 +33,8 @@ public class DiscordBotService
 
         _client.Log += LogAsync;
         _client.Ready += ReadyAsync;
+        _client.Connected += ConnectedAsync;
+        _client.Disconnected += DisconnectedAsync;
         _client.InteractionCreated += HandleInteractionAsync;
         _client.GuildAvailable += GuildAvailableAsync;
         _interactionService.Log += LogAsync;
@@ -195,12 +197,24 @@ public class DiscordBotService
                 _logger.LogError(ex, "Error registering commands");
             }
             
-            _readyCompletionSource.SetResult(true);
+            _readyCompletionSource.TrySetResult(true);
         });
         
         return Task.CompletedTask;
     }
-    
+
+    private Task ConnectedAsync()
+    {
+        _logger.LogInformation("[DiscordLifecycle] Connected to Discord as {Username} (state: {State})", _client.CurrentUser?.Username ?? "unknown", _client.ConnectionState);
+        return Task.CompletedTask;
+    }
+
+    private Task DisconnectedAsync(Exception ex)
+    {
+        _logger.LogWarning(ex, "[DiscordLifecycle] Disconnected from Discord (state: {State})", _client.ConnectionState);
+        return Task.CompletedTask;
+    }
+
     private Task GuildAvailableAsync(SocketGuild guild)
     {
         _logger.LogInformation("Guild available: {GuildName} ({GuildId})", guild.Name, guild.Id);
