@@ -24,6 +24,9 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File(Path.Combine(logsDir, "pandabot-.log"), 
         rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 14,
+        fileSizeLimitBytes: 50 * 1024 * 1024,   // 50 MB per file
+        rollOnFileSizeLimit: true,
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext:l} {Message:lj}{NewLine}{Exception}")
     .CreateLogger();
 

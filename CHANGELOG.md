@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.30] - 2026-05-14
+
+### Changed
+
+* Add size and retention limits to PandaBot file log rotation
+
 ## [1.5.29] - 2026-05-14
 
 ### Changed
