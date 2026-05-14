@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.26] - 2026-05-14
+
+### Changed
+
+* Restore recursive deploy preflight ownership to prevent rsync permission errors
+
 ## [1.5.25] - 2026-05-14
 
 ### Changed
