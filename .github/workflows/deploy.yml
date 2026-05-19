@@ -99,7 +99,7 @@ jobs:
       run: |
         scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no .github/deployment/pandabot.service ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/pandabot.service
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-          "sudo -n mv /tmp/pandabot.service /etc/systemd/system/pandabot.service && sudo -n systemctl daemon-reload"
+          "sudo -n mv /tmp/pandabot.service /etc/systemd/system/pandabot.service && sudo -n chown root:root /etc/systemd/system/pandabot.service && sudo -n chmod 644 /etc/systemd/system/pandabot.service && sudo -n systemctl daemon-reload"
 
     - name: Deploy journald retention policy
       run: |
