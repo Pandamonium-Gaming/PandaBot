@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.33] - 2026-05-19
+
+### Changed
+
+* Register slash commands only once; skip re-registration on gateway reconnects
+
+## [1.5.32] - 2026-05-19
+
+### Changed
+
+* Downgrade graceful Discord disconnect log from Warning to Information
+
 ## [1.5.31] - 2026-05-14
 
 ### Changed
