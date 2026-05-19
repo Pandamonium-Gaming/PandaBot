@@ -182,10 +182,19 @@ public class DiscordBotService
                 return;
             }
 
-            await Task.Delay(2000);
-            
             try
             {
+                await Task.Delay(2000);
+
+                if (_client.ConnectionState != ConnectionState.Connected)
+                {
+                    Interlocked.Exchange(ref _commandsRegistered, 0);
+                    _logger.LogInformation(
+                        "Skipping slash command registration because client state is {State}. Will retry on next Ready.",
+                        _client.ConnectionState);
+                    return;
+                }
+
                 if (_config.GuildId.HasValue)
                 {
                     _logger.LogInformation("Registering commands to guild...");
@@ -202,7 +211,17 @@ public class DiscordBotService
             catch (Exception ex)
             {
                 Interlocked.Exchange(ref _commandsRegistered, 0);
-                _logger.LogError(ex, "Error registering commands");
+                if (_client.ConnectionState != ConnectionState.Connected)
+                {
+                    _logger.LogInformation(
+                        ex,
+                        "Skipped slash command registration due to transient disconnect (state: {State}). Will retry on next Ready.",
+                        _client.ConnectionState);
+                }
+                else
+                {
+                    _logger.LogError(ex, "Error registering commands");
+                }
             }
             
             _readyCompletionSource.TrySetResult(true);
@@ -219,7 +238,7 @@ public class DiscordBotService
 
     private Task DisconnectedAsync(Exception? ex)
     {
-        if (ex is null)
+        if (ex is null || _client.LoginState == LoginState.LoggedIn)
             _logger.LogInformation("[DiscordLifecycle] Disconnected from Discord (state: {State})", _client.ConnectionState);
         else
             _logger.LogWarning(ex, "[DiscordLifecycle] Disconnected from Discord (state: {State})", _client.ConnectionState);

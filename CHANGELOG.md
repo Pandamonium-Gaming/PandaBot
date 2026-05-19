@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.34] - 2026-05-19
+
+### Changed
+
+* Harmonize reconnect-safe slash command registration and transient disconnect logging
+
 ## [1.5.33] - 2026-05-19
 
 ### Changed
