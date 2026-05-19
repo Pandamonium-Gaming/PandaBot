@@ -116,6 +116,7 @@ jobs:
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
           "sudo -n tee ${{ env.DEPLOY_PATH }}/.env > /dev/null << 'ENVEOF'
         PANDABOT_Discord__Token=${{ secrets.DISCORD_TOKEN }}
+        PANDABOT_Discord__GuildId=${{ secrets.GUILD_ID || '449201329798119474' }}
         PANDABOT_Discord__Prefix=!
         PANDABOT_ConnectionStrings__DefaultConnection=Data Source=${{ env.DEPLOY_PATH }}/pandabot.db
         PANDABOT_AshesForge__CacheExpirationHours=24

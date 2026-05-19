@@ -251,6 +251,7 @@ This repository uses `.github/workflows/dotnet.yml` for CI and `.github/workflow
 | GitHub Secret | Runtime Environment Variable |
 | --- | --- |
 | `DISCORD_TOKEN` | `PANDABOT_Discord__Token` |
+| `GUILD_ID` | `PANDABOT_Discord__GuildId` |
 | `HEARTBEAT_ENABLED` | `PANDABOT_Discord__Heartbeat__Enabled` |
 | `HEARTBEAT_PUSH_URL` | `PANDABOT_Discord__Heartbeat__PushUrl` |
 | `HEARTBEAT_INTERVAL_SECONDS` | `PANDABOT_Discord__Heartbeat__IntervalSeconds` |
