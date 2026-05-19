@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.36] - 2026-05-19
+
+### Changed
+
+* Version bump
+
 ## [1.5.35] - 2026-05-19
 
 ### Changed
