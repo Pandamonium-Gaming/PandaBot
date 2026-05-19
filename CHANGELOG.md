@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.35] - 2026-05-19
+
+### Changed
+
+* Downgrade disconnect lifecycle warnings to informational logging
+
 ## [1.5.34] - 2026-05-19
 
 ### Changed
