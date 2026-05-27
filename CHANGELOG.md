@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.37] - 2026-05-27
+
+### Changed
+
+* Add Prometheus metrics endpoint
+
 ## [1.5.36] - 2026-05-19
 
 ### Changed

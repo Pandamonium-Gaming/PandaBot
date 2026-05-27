@@ -1,4 +1,4 @@
-﻿using Discord;
+using Discord;
 using Discord.WebSocket;
 using Discord.Interactions;
 using DiscordBot.Models;
@@ -146,6 +146,8 @@ public static class ServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString("DefaultConnection") ?? "Data Source=./pandabot.db";
         services.AddDbContext<PandaBot.Core.Data.PandaBotContext>(options =>
             options.UseSqlite(connectionString));
+
+        services.AddHostedService<DiscordBot.Services.MetricsHostedService>();
 
         return services;
     }
