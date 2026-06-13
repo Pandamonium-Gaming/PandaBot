@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using PandaBot.Core.Models;
+using PandaBot.Models;
 using PandaBot.Models.AshesOfCreation;
 using PandaBot.Models.StarCitizen;
 
@@ -22,6 +23,8 @@ public class PandaBotContext : DbContext
     public DbSet<MobRecipeDrop> MobRecipeDrops { get; set; }
     public DbSet<ItemCache> UexItemCache { get; set; }
     public DbSet<VehicleCache> UexVehicleCache { get; set; }
+    public DbSet<SingleMessageChannelState> SingleMessageChannelStates { get; set; }
+    public DbSet<SingleMessageRecord> SingleMessageRecords { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -127,6 +130,26 @@ public class PandaBotContext : DbContext
             entity.HasIndex(e => e.Name);
             entity.HasIndex(e => e.Type);
             entity.Property(e => e.CachedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        modelBuilder.Entity<SingleMessageChannelState>(entity =>
+        {
+            entity.HasKey(x => x.ChannelId);
+            entity.Property(x => x.ChannelId).ValueGeneratedNever();
+            entity.Property(x => x.IsEnabled).HasDefaultValue(false);
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(x => x.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        modelBuilder.Entity<SingleMessageRecord>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.ChannelId, x.UserId }).IsUnique();
+            entity.HasOne(x => x.Channel)
+                .WithMany()
+                .HasForeignKey(x => x.ChannelId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(x => x.PostedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
     }
 }
