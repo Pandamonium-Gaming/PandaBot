@@ -67,6 +67,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddSingleton<DiscordBotService>();
+        services.AddSingleton<SingleMessageService>();
         services.AddHttpClient<HeartbeatMonitorService>();
         services.AddHostedService<HeartbeatMonitorService>();
 
