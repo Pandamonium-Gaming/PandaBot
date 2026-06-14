@@ -6,10 +6,19 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using DiscordBot.Models;
+using DiscordBot.Services;
 
 namespace DiscordBot.Modules.Moderations;
 public class PurgeUser : InteractionModuleBase<SocketInteractionContext>
 {
+    private readonly ModerationLogService _logService;
+
+    public PurgeUser(ModerationLogService logService)
+    {
+        _logService = logService;
+    }
+
     [SlashCommand("purge_user", "Delete messages from a member")]
     [RequireUserPermission(GuildPermission.ManageMessages)]
     [RequireBotPermission(GuildPermission.ManageMessages)]
@@ -30,6 +39,8 @@ public class PurgeUser : InteractionModuleBase<SocketInteractionContext>
         {
             await DeferAsync(ephemeral: true);
             var result = await PurgeUserMessagesAsync(Context, userId, amount, allChannels);
+            await _logService.LogActionAsync(ModerationLogEntry.CreateUnknownTarget(
+                ModerationActionType.PurgeUser, userId, Context.User, result));
             await FollowupAsync(result, ephemeral: true);
         }
         else

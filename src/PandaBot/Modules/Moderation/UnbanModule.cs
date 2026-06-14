@@ -4,11 +4,20 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using DiscordBot.Models;
+using DiscordBot.Services;
 
 namespace DiscordBot.Modules.Moderations;
 
 public class UnbanModule : InteractionModuleBase<SocketInteractionContext>
 {
+    private readonly ModerationLogService _logService;
+
+    public UnbanModule(ModerationLogService logService)
+    {
+        _logService = logService;
+    }
+
     [SlashCommand("unban", "Unban a member from the server by ID")]
     [RequireUserPermission(GuildPermission.BanMembers)]
     [RequireBotPermission(GuildPermission.BanMembers)]
@@ -35,6 +44,8 @@ public class UnbanModule : InteractionModuleBase<SocketInteractionContext>
             {
                 AuditLogReason = reason ?? "No reason provided"
             });
+            await _logService.LogActionAsync(ModerationLogEntry.CreateUnknownTarget(
+                ModerationActionType.Unban, bannedUser.Id, Context.User, reason));
 
             await RespondAsync(
                 $"✅ Successfully unbanned **{bannedUser.Username}#{bannedUser.Discriminator}** (Reason: {reason ?? "No reason provided"})"

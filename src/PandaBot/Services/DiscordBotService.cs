@@ -15,6 +15,7 @@ public class DiscordBotService
     private readonly BotConfig _config;
     private readonly ILogger<DiscordBotService> _logger;
     private readonly SingleMessageService _singleMessageService;
+    private readonly CrossChannelSpamDetector _spamDetector;
     private readonly TaskCompletionSource<bool> _readyCompletionSource = new();
     private int _commandsRegistered;
 
@@ -26,7 +27,8 @@ public class DiscordBotService
         IServiceProvider services,
         BotConfig config,
         ILogger<DiscordBotService> logger,
-        SingleMessageService singleMessageService)
+        SingleMessageService singleMessageService,
+        CrossChannelSpamDetector spamDetector)
     {
         _client = client;
         _interactionService = interactionService;
@@ -34,6 +36,7 @@ public class DiscordBotService
         _config = config;
         _logger = logger;
         _singleMessageService = singleMessageService;
+        _spamDetector = spamDetector;
 
         _client.Log += LogAsync;
         _client.Ready += ReadyAsync;
@@ -42,6 +45,7 @@ public class DiscordBotService
         _client.InteractionCreated += HandleInteractionAsync;
         _client.GuildAvailable += GuildAvailableAsync;
         _client.MessageReceived += _singleMessageService.HandleMessageAsync;
+        _client.MessageReceived += _spamDetector.HandleMessageAsync;
         _interactionService.Log += LogAsync;
         _interactionService.SlashCommandExecuted += SlashCommandExecutedAsync;
     }

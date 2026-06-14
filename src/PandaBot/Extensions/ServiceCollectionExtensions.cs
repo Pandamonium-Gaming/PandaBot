@@ -45,13 +45,20 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(botConfig);
 
+        var modLogConfig = configuration.GetSection("ModerationLog").Get<ModerationLogConfig>() ?? new ModerationLogConfig();
+        services.AddSingleton(modLogConfig);
+
+        var spamConfig = configuration.GetSection("CrossChannelSpam").Get<CrossChannelSpamConfig>() ?? new CrossChannelSpamConfig();
+        services.AddSingleton(spamConfig);
+
         var socketConfig = new DiscordSocketConfig
         {
             AlwaysDownloadUsers = true,
-            GatewayIntents = GatewayIntents.Guilds | 
-                             GatewayIntents.GuildMembers | 
+            GatewayIntents = GatewayIntents.Guilds |
+                             GatewayIntents.GuildMembers |
                              GatewayIntents.GuildMessages |
-                             GatewayIntents.GuildMessageReactions,
+                             GatewayIntents.GuildMessageReactions |
+                             GatewayIntents.MessageContent,
             LogLevel = LogSeverity.Info,
             MessageCacheSize = 100,
             AlwaysResolveStickers = false,
@@ -68,6 +75,8 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<DiscordBotService>();
         services.AddSingleton<SingleMessageService>();
+        services.AddSingleton<ModerationLogService>();
+        services.AddSingleton<CrossChannelSpamDetector>();
         services.AddHttpClient<HeartbeatMonitorService>();
         services.AddHostedService<HeartbeatMonitorService>();
 
