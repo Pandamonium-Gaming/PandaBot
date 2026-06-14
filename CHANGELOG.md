@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.0] - 2026-06-14
+
+### Changed
+
+* Add single-message-per-user channel enforcement with /singlemessage slash commands
+
 ## [1.5.37] - 2026-05-27
 
 ### Changed
