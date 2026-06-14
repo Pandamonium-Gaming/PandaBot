@@ -13,6 +13,7 @@ env:
   DOTNET_VERSION: '10.0.203'
   PROJECT_PATH: 'src/PandaBot/PandaBot.csproj'
   DEPLOY_USER: 'deployer'
+  RUNTIME_USER: 'pandabot'
   DEPLOY_PATH: '/opt/pandabot'
 
 jobs:
@@ -102,7 +103,9 @@ jobs:
         scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no .github/deployment/pandabot.service ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${REMOTE_STAGE}/pandabot.service
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
           "test -s ${REMOTE_STAGE}/pandabot.service && \
-           sudo -n install -o root -g root -m 644 ${REMOTE_STAGE}/pandabot.service /etc/systemd/system/pandabot.service && \
+           sudo -n tee /etc/systemd/system/pandabot.service < ${REMOTE_STAGE}/pandabot.service > /dev/null && \
+           sudo -n chown root:root /etc/systemd/system/pandabot.service && \
+           sudo -n chmod 644 /etc/systemd/system/pandabot.service && \
            rm -f ${REMOTE_STAGE}/pandabot.service && \
            sudo -n systemctl daemon-reload"
 
@@ -114,7 +117,9 @@ jobs:
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
           "sudo -n mkdir -p /etc/systemd/journald.conf.d && \
            test -s ${REMOTE_STAGE}/journald-bot-limits.conf && \
-           sudo -n install -o root -g root -m 644 ${REMOTE_STAGE}/journald-bot-limits.conf /etc/systemd/journald.conf.d/60-bot-limits.conf && \
+           sudo -n tee /etc/systemd/journald.conf.d/60-bot-limits.conf < ${REMOTE_STAGE}/journald-bot-limits.conf > /dev/null && \
+           sudo -n chown root:root /etc/systemd/journald.conf.d/60-bot-limits.conf && \
+           sudo -n chmod 644 /etc/systemd/journald.conf.d/60-bot-limits.conf && \
            rm -f ${REMOTE_STAGE}/journald-bot-limits.conf && \
            sudo -n systemctl restart systemd-journald && \
            sudo -n journalctl --rotate && \
@@ -139,13 +144,13 @@ jobs:
         PANDABOT_Discord__Heartbeat__StartupDelaySeconds=${{ secrets.HEARTBEAT_STARTUP_DELAY_SECONDS || '15' }}
         PANDABOT_Discord__Heartbeat__TimeoutSeconds=${{ secrets.HEARTBEAT_TIMEOUT_SECONDS || '10' }}
         ENVEOF
-        sudo -n chown pandabot:pandabot ${{ env.DEPLOY_PATH }}/.env
+        sudo -n chown ${{ env.RUNTIME_USER }}:${{ env.RUNTIME_USER }} ${{ env.DEPLOY_PATH }}/.env
         sudo -n chmod 600 ${{ env.DEPLOY_PATH }}/.env"
 
     - name: Set permissions
       run: |
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ env.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-          "sudo -n chown -R pandabot:pandabot ${{ env.DEPLOY_PATH }} && \
+          "sudo -n chown -R ${{ env.RUNTIME_USER }}:${{ env.RUNTIME_USER }} ${{ env.DEPLOY_PATH }} && \
            sudo -n chmod +x ${{ env.DEPLOY_PATH }}/PandaBot"
 
     - name: Start bot service
