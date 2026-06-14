@@ -36,6 +36,7 @@ Each module can be independently enabled/disabled via configuration.
 * `/purgeuser` - Remove all messages from a user
 * `/lock` / `/unlock` - Lock/unlock channels
 * `/slowmode` - Enable channel slowmode
+* `/singlemessage enable/disable/reset-user/list` - Manage single-message-per-user channel enforcement (requires Manage Channels)
 
 ## Development
 
@@ -277,3 +278,22 @@ Controls which game modules are loaded and available:
 * `EnableReturnOfReckoning` (bool): Enable Return of Reckoning status module (default: `true`)
 
 **Note:** Modules that are disabled will not load services or consume resources. Slash commands from disabled modules will not be available to users.
+
+### SingleMessage Section
+
+Register channels that should allow only one message per user. Channels must be listed here before `/singlemessage enable` will accept them.
+
+```json
+{
+  "SingleMessage": {
+    "Channels": [
+      { "ChannelId": 1234567890123456789, "ScanHistoryOnEnable": false }
+    ]
+  }
+}
+```
+
+* `Channels[].ChannelId` (ulong): Discord channel ID to register for single-message enforcement
+* `Channels[].ScanHistoryOnEnable` (bool): When `true`, scans the last 100 messages on enable to pre-populate existing posters (default: `false`)
+
+`SingleMessage:Channels` is an array and is best managed in `appsettings.json` rather than environment variables.
