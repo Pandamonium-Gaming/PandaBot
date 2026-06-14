@@ -38,6 +38,16 @@ Each module can be independently enabled/disabled via configuration.
 * `/slowmode` - Enable channel slowmode
 * `/singlemessage enable/disable/reset-user/list` - Manage single-message-per-user channel enforcement (requires Manage Channels)
 
+### Moderation Action Logging
+
+All moderation actions are logged as rich embeds to a Discord forum channel. Each embed shows the action type, the target user, the moderator, and the reason. Configure via the `ModerationLog` root-level config section.
+
+### Cross-Channel Spam Detection
+
+Detects users who send identical messages across multiple channels within a configurable time window. When triggered, a spam alert is posted to the moderation log forum channel with **Ban** and **Dismiss** buttons for moderators. Configure via the `CrossChannelSpam` root-level config section.
+
+> **Note:** Both features require the **Message Content** privileged intent to be enabled in the [Discord Developer Portal](https://discord.com/developers/applications). Restart the bot after enabling it — no token refresh is required.
+
 ## Development
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development guidelines, including:
@@ -150,6 +160,41 @@ set PANDABOT_AshesForge__CacheExpirationHours=24
 set PANDABOT_AshesForge__EnableImageCaching=true
 ```
 
+#### Moderation Log Configuration
+
+```bash
+# Linux/Mac
+export PANDABOT_ModerationLog__ForumChannelId=1234567890
+export PANDABOT_ModerationLog__ModeratorRoleId=1234567890
+
+# Windows PowerShell
+$env:PANDABOT_ModerationLog__ForumChannelId="1234567890"
+$env:PANDABOT_ModerationLog__ModeratorRoleId="1234567890"
+
+# Windows CMD
+set PANDABOT_ModerationLog__ForumChannelId=1234567890
+set PANDABOT_ModerationLog__ModeratorRoleId=1234567890
+```
+
+#### Cross-Channel Spam Configuration
+
+```bash
+# Linux/Mac
+export PANDABOT_CrossChannelSpam__Enabled=false
+export PANDABOT_CrossChannelSpam__TimeWindowSeconds=30
+export PANDABOT_CrossChannelSpam__MinimumChannelCount=3
+
+# Windows PowerShell
+$env:PANDABOT_CrossChannelSpam__Enabled="false"
+$env:PANDABOT_CrossChannelSpam__TimeWindowSeconds="30"
+$env:PANDABOT_CrossChannelSpam__MinimumChannelCount="3"
+
+# Windows CMD
+set PANDABOT_CrossChannelSpam__Enabled=false
+set PANDABOT_CrossChannelSpam__TimeWindowSeconds=30
+set PANDABOT_CrossChannelSpam__MinimumChannelCount=3
+```
+
 #### Game Modules Configuration
 
 ```bash
@@ -258,6 +303,11 @@ This repository uses `.github/workflows/dotnet.yml` for CI and `.github/workflow
 | `HEARTBEAT_INTERVAL_SECONDS` | `PANDABOT_Discord__Heartbeat__IntervalSeconds` |
 | `HEARTBEAT_STARTUP_DELAY_SECONDS` | `PANDABOT_Discord__Heartbeat__StartupDelaySeconds` |
 | `HEARTBEAT_TIMEOUT_SECONDS` | `PANDABOT_Discord__Heartbeat__TimeoutSeconds` |
+| `MODERATION_LOG_FORUM_CHANNEL_ID` | `PANDABOT_ModerationLog__ForumChannelId` |
+| `MODERATION_LOG_MODERATOR_ROLE_ID` | `PANDABOT_ModerationLog__ModeratorRoleId` |
+| `CROSS_CHANNEL_SPAM_ENABLED` | `PANDABOT_CrossChannelSpam__Enabled` |
+| `CROSS_CHANNEL_SPAM_TIME_WINDOW_SECONDS` | `PANDABOT_CrossChannelSpam__TimeWindowSeconds` |
+| `CROSS_CHANNEL_SPAM_MINIMUM_CHANNEL_COUNT` | `PANDABOT_CrossChannelSpam__MinimumChannelCount` |
 
 ### ConnectionStrings Section
 
@@ -278,6 +328,25 @@ Controls which game modules are loaded and available:
 * `EnableReturnOfReckoning` (bool): Enable Return of Reckoning status module (default: `true`)
 
 **Note:** Modules that are disabled will not load services or consume resources. Slash commands from disabled modules will not be available to users.
+
+### ModerationLog Section
+
+All moderation actions are logged as rich embeds to a Discord forum channel. Each embed shows the action type, the target user, the moderator, and the reason.
+
+> **Note:** `ModerationLog` is a root-level config section, not nested under `Discord`.
+
+* `ForumChannelId` (ulong): Forum channel ID where moderation log threads are created (`0` = disabled)
+* `ModeratorRoleId` (ulong): Optional role to mention in log posts (`0` = no mention)
+
+### CrossChannelSpam Section
+
+Detects users who send identical messages across multiple channels within a short time window. When triggered, a spam alert is posted to the moderation log forum channel with **Ban** and **Dismiss** buttons for moderators.
+
+> **Note:** `CrossChannelSpam` is a root-level config section, not nested under `Discord`. Requires the **Message Content** privileged intent enabled in the Discord Developer Portal.
+
+* `Enabled` (bool): Enable cross-channel spam detection (default: `false`)
+* `TimeWindowSeconds` (int): Sliding window duration in seconds (default: `30`)
+* `MinimumChannelCount` (int): Minimum number of distinct channels before a detection fires (default: `3`)
 
 ### SingleMessage Section
 

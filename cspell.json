@@ -56,6 +56,7 @@
     "backgroundservice",
     "botname",
     "bottoken",
+    "buildtransitive",
     "cacheditem",
     "cachedmob",
     "cachedrecipe",
@@ -66,6 +67,7 @@
     "commandexecuted",
     "componentbuilder",
     "componentcommand",
+    "contentfiles",
     "contextservices",
     "craftingrecipe",
     "crafttime",
@@ -182,6 +184,7 @@
     "versetime",
     "Warbond",
     "wixproj",
-    "wwaproj"
+    "wwaproj",
+    "xunit"
   ]
 }
