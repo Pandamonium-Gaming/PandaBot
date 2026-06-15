@@ -345,6 +345,16 @@ This repository uses `.github/workflows/dotnet.yml` for CI and `.github/workflow
 | `CROSS_CHANNEL_SPAM_ENABLED` | `PANDABOT_CrossChannelSpam__Enabled` |
 | `CROSS_CHANNEL_SPAM_TIME_WINDOW_SECONDS` | `PANDABOT_CrossChannelSpam__TimeWindowSeconds` |
 | `CROSS_CHANNEL_SPAM_MINIMUM_CHANNEL_COUNT` | `PANDABOT_CrossChannelSpam__MinimumChannelCount` |
+| `MODERATION_EXEMPT_USER_ID_0` | `PANDABOT_ModerationExemptions__ExemptUserIds__0` |
+| `MODERATION_EXEMPT_ROLE_ID_0` | `PANDABOT_ModerationExemptions__ExemptRoleIds__0` |
+| `COMMAND_ACCESS_DISABLE_ALL_FUN_COMMANDS` | `PANDABOT_CommandAccess__DisableAllFunCommands` |
+| `COMMAND_ACCESS_DISABLED_COMMAND_0` | `PANDABOT_CommandAccess__DisabledCommands__0` |
+| `COMMAND_ACCESS_DISABLED_COMMAND_1` | `PANDABOT_CommandAccess__DisabledCommands__1` |
+| `COMMAND_ACCESS_DISABLED_COMMAND_2` | `PANDABOT_CommandAccess__DisabledCommands__2` |
+| `COMMAND_ACCESS_DISABLED_COMMAND_3` | `PANDABOT_CommandAccess__DisabledCommands__3` |
+| `COMMAND_ACCESS_DISABLED_COMMAND_4` | `PANDABOT_CommandAccess__DisabledCommands__4` |
+| `COMMAND_ACCESS_DISABLED_COMMAND_5` | `PANDABOT_CommandAccess__DisabledCommands__5` |
+| `COMMAND_ACCESS_DISABLED_COMMAND_6` | `PANDABOT_CommandAccess__DisabledCommands__6` |
 
 ### ConnectionStrings Section
 
