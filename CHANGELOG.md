@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.1] - 2026-06-15
+
+### Changed
+
+* `SingleMessageService` is now fully DB-backed — channel registration no longer requires an `appsettings.json`/env-var config entry; `/singlemessage enable` and `/singlemessage disable` operate directly on the database at runtime with no redeploy needed
+* `/singlemessage enable` gains a `scan_history` parameter (default `true`) replacing the old per-channel config flag
+* `/singlemessage list` now shows enforcement status (active / disabled) alongside posted users
+
+### Added
+
+* `/spam test` command (requires Manage Messages) — dry-runs the cross-channel spam detector against any text, showing the computed fingerprint, current config, trigger conditions, and enforcement actions without taking any real action
+
 ## [1.6.0] - 2026-06-14
 
 ### Changed
