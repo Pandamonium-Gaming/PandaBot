@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.2] - 2026-06-15
+
+### Fixed
+
+* `DiscordBotService` no longer hangs for 60 seconds on startup when a transient disconnect occurs during the post-Ready delay — `_readyCompletionSource` is now set in a `finally` block so it fires on all exit paths
+
 ## [1.6.1] - 2026-06-15
 
 ### Changed

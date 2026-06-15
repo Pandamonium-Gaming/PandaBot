@@ -231,8 +231,10 @@ public class DiscordBotService
                     _logger.LogError(ex, "Error registering commands");
                 }
             }
-            
-            _readyCompletionSource.TrySetResult(true);
+            finally
+            {
+                _readyCompletionSource.TrySetResult(true);
+            }
         });
         
         return Task.CompletedTask;
