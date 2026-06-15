@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.5] - 2026-06-15
+
+### Changed
+
+* Fix cross-channel live test detection state and add attachment-aware spam test support
+
 ## [1.6.4] - 2026-06-15
 
 ### Changed
