@@ -16,6 +16,7 @@ public class DiscordBotService
     private readonly ILogger<DiscordBotService> _logger;
     private readonly SingleMessageService _singleMessageService;
     private readonly CrossChannelSpamDetector _spamDetector;
+    private readonly CommandAccessService _commandAccessService;
     private readonly TaskCompletionSource<bool> _readyCompletionSource = new();
     private int _commandsRegistered;
 
@@ -28,7 +29,8 @@ public class DiscordBotService
         BotConfig config,
         ILogger<DiscordBotService> logger,
         SingleMessageService singleMessageService,
-        CrossChannelSpamDetector spamDetector)
+        CrossChannelSpamDetector spamDetector,
+        CommandAccessService commandAccessService)
     {
         _client = client;
         _interactionService = interactionService;
@@ -37,6 +39,7 @@ public class DiscordBotService
         _logger = logger;
         _singleMessageService = singleMessageService;
         _spamDetector = spamDetector;
+        _commandAccessService = commandAccessService;
 
         _client.Log += LogAsync;
         _client.Ready += ReadyAsync;
@@ -296,6 +299,13 @@ public class DiscordBotService
             if (interaction is SocketMessageComponent component)
             {
                 _logger.LogInformation("Component interaction with CustomId: '{CustomId}'", component.Data.CustomId);
+            }
+
+            if (interaction is SocketSlashCommand slashCommand &&
+                _commandAccessService.TryGetBlockReason(slashCommand.CommandName, interaction.Channel.Id, out var blockReason))
+            {
+                await interaction.RespondAsync($"❌ {blockReason}", ephemeral: true);
+                return;
             }
             
             var ctx = new SocketInteractionContext(_client, interaction);

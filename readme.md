@@ -195,6 +195,43 @@ set PANDABOT_CrossChannelSpam__TimeWindowSeconds=30
 set PANDABOT_CrossChannelSpam__MinimumChannelCount=3
 ```
 
+#### Moderation Exemptions Configuration
+
+```bash
+# Linux/Mac
+export PANDABOT_ModerationExemptions__ExemptUserIds__0=1234567890
+export PANDABOT_ModerationExemptions__ExemptRoleIds__0=1234567890
+
+# Windows PowerShell
+$env:PANDABOT_ModerationExemptions__ExemptUserIds__0="1234567890"
+$env:PANDABOT_ModerationExemptions__ExemptRoleIds__0="1234567890"
+
+# Windows CMD
+set PANDABOT_ModerationExemptions__ExemptUserIds__0=1234567890
+set PANDABOT_ModerationExemptions__ExemptRoleIds__0=1234567890
+```
+
+#### Command Access Configuration
+
+```bash
+# Disable all fun commands (meme, 8ball, roll, joke, say)
+PANDABOT_CommandAccess__DisableAllFunCommands=true
+
+# Disable specific commands globally
+PANDABOT_CommandAccess__DisabledCommands__0=about
+PANDABOT_CommandAccess__DisabledCommands__1=avatar
+PANDABOT_CommandAccess__DisabledCommands__2=help
+PANDABOT_CommandAccess__DisabledCommands__3=ping
+PANDABOT_CommandAccess__DisabledCommands__4=remind
+PANDABOT_CommandAccess__DisabledCommands__5=serverinfo
+PANDABOT_CommandAccess__DisabledCommands__6=userinfo
+
+# Restrict commands to allowed channel IDs
+PANDABOT_CommandAccess__RestrictedChannels__about__0=1234567890
+PANDABOT_CommandAccess__RestrictedChannels__help__0=1234567890
+PANDABOT_CommandAccess__RestrictedChannels__help__1=2345678901
+```
+
 #### Game Modules Configuration
 
 ```bash

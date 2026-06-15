@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.3] - 2026-06-15
+
+### Changed
+
+* Add moderation exemptions, command access controls, and forum log resolution fallback
+
 ## [1.6.2] - 2026-06-15
 
 ### Fixed
