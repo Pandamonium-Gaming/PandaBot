@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.6] - 2026-06-15
+
+### Changed
+
+* Fix live test detection race via TCS; make content optional (attachment-only test now supported)
+
 ## [1.6.5] - 2026-06-15
 
 ### Changed
