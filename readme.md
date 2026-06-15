@@ -183,16 +183,22 @@ set PANDABOT_ModerationLog__ModeratorRoleId=1234567890
 export PANDABOT_CrossChannelSpam__Enabled=false
 export PANDABOT_CrossChannelSpam__TimeWindowSeconds=30
 export PANDABOT_CrossChannelSpam__MinimumChannelCount=3
+export PANDABOT_CrossChannelSpam__DeleteMessages=true
+export PANDABOT_CrossChannelSpam__TimeoutOnDetection=true
 
 # Windows PowerShell
 $env:PANDABOT_CrossChannelSpam__Enabled="false"
 $env:PANDABOT_CrossChannelSpam__TimeWindowSeconds="30"
 $env:PANDABOT_CrossChannelSpam__MinimumChannelCount="3"
+$env:PANDABOT_CrossChannelSpam__DeleteMessages="true"
+$env:PANDABOT_CrossChannelSpam__TimeoutOnDetection="true"
 
 # Windows CMD
 set PANDABOT_CrossChannelSpam__Enabled=false
 set PANDABOT_CrossChannelSpam__TimeWindowSeconds=30
 set PANDABOT_CrossChannelSpam__MinimumChannelCount=3
+set PANDABOT_CrossChannelSpam__DeleteMessages=true
+set PANDABOT_CrossChannelSpam__TimeoutOnDetection=true
 ```
 
 #### Moderation Exemptions Configuration
@@ -345,6 +351,8 @@ This repository uses `.github/workflows/dotnet.yml` for CI and `.github/workflow
 | `CROSS_CHANNEL_SPAM_ENABLED` | `PANDABOT_CrossChannelSpam__Enabled` |
 | `CROSS_CHANNEL_SPAM_TIME_WINDOW_SECONDS` | `PANDABOT_CrossChannelSpam__TimeWindowSeconds` |
 | `CROSS_CHANNEL_SPAM_MINIMUM_CHANNEL_COUNT` | `PANDABOT_CrossChannelSpam__MinimumChannelCount` |
+| `CROSS_CHANNEL_SPAM_DELETE_MESSAGES` | `PANDABOT_CrossChannelSpam__DeleteMessages` |
+| `CROSS_CHANNEL_SPAM_TIMEOUT_ON_DETECTION` | `PANDABOT_CrossChannelSpam__TimeoutOnDetection` |
 | `MODERATION_EXEMPT_USER_ID_0` | `PANDABOT_ModerationExemptions__ExemptUserIds__0` |
 | `MODERATION_EXEMPT_ROLE_ID_0` | `PANDABOT_ModerationExemptions__ExemptRoleIds__0` |
 | `COMMAND_ACCESS_DISABLE_ALL_FUN_COMMANDS` | `PANDABOT_CommandAccess__DisableAllFunCommands` |
@@ -394,6 +402,8 @@ Detects users who send identical messages across multiple channels within a shor
 * `Enabled` (bool): Enable cross-channel spam detection (default: `false`)
 * `TimeWindowSeconds` (int): Sliding window duration in seconds (default: `30`)
 * `MinimumChannelCount` (int): Minimum number of distinct channels before a detection fires (default: `3`)
+* `DeleteMessages` (bool): Delete detected spam messages — requires Manage Messages (default: `true`)
+* `TimeoutOnDetection` (bool): Apply a 28-day timeout to the spammer — requires Moderate Members (default: `true`)
 
 ### SingleMessage Section
 

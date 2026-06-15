@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.7] - 2026-06-15
+
+### Changed
+
+* Add configurable cross-channel spam enforcement defaults (delete+timeout on)
+
 ## [1.6.6] - 2026-06-15
 
 ### Changed
