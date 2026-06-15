@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.4] - 2026-06-15
+
+### Changed
+
+* Improve cross-channel spam detection fingerprinting, logging, and add cleanup-enabled live testing
+
 ## [1.6.3] - 2026-06-15
 
 ### Changed
