@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.9] - 2026-06-18
+
+### Changed
+
+* Add persistent background single-message history backfill
+
 ## [1.6.8] - 2026-06-18
 
 ### Changed

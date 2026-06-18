@@ -166,7 +166,9 @@ public static class ServiceCollectionExtensions
             options.UseSqlite(connectionString));
 
         services.AddHostedService<DiscordBot.Services.MetricsHostedService>();
+        services.AddHostedService<SingleMessageHistoryBackfillHostedService>();
 
         return services;
     }
 }
+
