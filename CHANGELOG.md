@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.11] - 2026-06-18
+
+### Changed
+
+* Show username and user ID in /singlemessage list output
+
 ## [1.6.10] - 2026-06-18
 
 ### Changed
