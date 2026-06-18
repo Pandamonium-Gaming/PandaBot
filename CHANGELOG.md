@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.8] - 2026-06-18
+
+### Changed
+
+* Fix single-message enable interaction timeout by deferring response
+
 ## [1.6.7] - 2026-06-15
 
 ### Changed
