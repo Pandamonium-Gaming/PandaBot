@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.10] - 2026-06-18
+
+### Changed
+
+* Add EF migration for persistent single-message backfill startup fix
+
 ## [1.6.9] - 2026-06-18
 
 ### Changed
