@@ -66,7 +66,7 @@ public static class ServiceCollectionExtensions
                              GatewayIntents.GuildMessageReactions |
                              GatewayIntents.MessageContent,
             LogLevel = LogSeverity.Info,
-            MessageCacheSize = 100,
+            MessageCacheSize = modLogConfig.EventAuditEnabled && modLogConfig.LogMessageDeletes ? 1000 : 100,
             AlwaysResolveStickers = false,
             UseInteractionSnowflakeDate = true
         };
