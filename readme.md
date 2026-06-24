@@ -348,6 +348,11 @@ This repository uses `.github/workflows/dotnet.yml` for CI and `.github/workflow
 | `HEARTBEAT_TIMEOUT_SECONDS` | `PANDABOT_Discord__Heartbeat__TimeoutSeconds` |
 | `MODERATION_LOG_FORUM_CHANNEL_ID` | `PANDABOT_ModerationLog__ForumChannelId` |
 | `MODERATION_LOG_MODERATOR_ROLE_ID` | `PANDABOT_ModerationLog__ModeratorRoleId` |
+| `MODERATION_LOG_EVENT_AUDIT_ENABLED` | `PANDABOT_ModerationLog__EventAuditEnabled` |
+| `MODERATION_LOG_EVENT_AUDIT_CHANNEL_ID` | `PANDABOT_ModerationLog__EventAuditChannelId` |
+| `MODERATION_LOG_EVENT_AUDIT_LOG_MESSAGE_DELETES` | `PANDABOT_ModerationLog__LogMessageDeletes` |
+| `MODERATION_LOG_EVENT_AUDIT_LOG_MEMBER_LEAVES` | `PANDABOT_ModerationLog__LogMemberLeaves` |
+| `MODERATION_LOG_AUDIT_LOG_LOOKBACK_SECONDS` | `PANDABOT_ModerationLog__AuditLogLookbackSeconds` |
 | `CROSS_CHANNEL_SPAM_ENABLED` | `PANDABOT_CrossChannelSpam__Enabled` |
 | `CROSS_CHANNEL_SPAM_TIME_WINDOW_SECONDS` | `PANDABOT_CrossChannelSpam__TimeWindowSeconds` |
 | `CROSS_CHANNEL_SPAM_MINIMUM_CHANNEL_COUNT` | `PANDABOT_CrossChannelSpam__MinimumChannelCount` |
