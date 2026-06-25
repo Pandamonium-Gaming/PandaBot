@@ -4,7 +4,7 @@
 
 A feature-rich Discord bot for gaming communities. Provides information about server statuses, game recipes, moderation tools, and community features.
 
-**Current Version:** 1.2.1 | **Framework:** .NET 9.0 | **Discord.Net:** v3.18.0
+**Current Version:** 1.7.0 | **Framework:** .NET 10.0 | **Discord.Net:** v3.18.0
 
 ## Features
 
