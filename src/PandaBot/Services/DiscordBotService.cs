@@ -54,6 +54,7 @@ public class DiscordBotService
         _client.MessageReceived += _singleMessageService.HandleMessageAsync;
         _client.MessageReceived += _spamDetector.HandleMessageAsync;
         _client.MessageDeleted += _eventAuditLogService.HandleMessageDeletedAsync;
+        _client.UserJoined += _eventAuditLogService.HandleUserJoinedAsync;
         _client.UserLeft += _eventAuditLogService.HandleUserLeftAsync;
         _interactionService.Log += LogAsync;
         _interactionService.SlashCommandExecuted += SlashCommandExecutedAsync;
