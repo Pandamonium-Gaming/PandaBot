@@ -352,6 +352,9 @@ This repository uses `.github/workflows/dotnet.yml` for CI and `.github/workflow
 | `MODERATION_LOG_EVENT_AUDIT_CHANNEL_ID` | `PANDABOT_ModerationLog__EventAuditChannelId` |
 | `MODERATION_LOG_EVENT_AUDIT_LOG_MESSAGE_DELETES` | `PANDABOT_ModerationLog__LogMessageDeletes` |
 | `MODERATION_LOG_EVENT_AUDIT_LOG_MEMBER_LEAVES` | `PANDABOT_ModerationLog__LogMemberLeaves` |
+| `MODERATION_LOG_EVENT_AUDIT_LOG_MEMBER_JOINS` | `PANDABOT_ModerationLog__LogMemberJoins` |
+| `MODERATION_LOG_IGNORED_USER_ID_0` | `PANDABOT_ModerationLog__IgnoredUserIds__0` |
+| `MODERATION_LOG_IGNORED_USER_ID_1` | `PANDABOT_ModerationLog__IgnoredUserIds__1` |
 | `MODERATION_LOG_AUDIT_LOG_LOOKBACK_SECONDS` | `PANDABOT_ModerationLog__AuditLogLookbackSeconds` |
 | `CROSS_CHANNEL_SPAM_ENABLED` | `PANDABOT_CrossChannelSpam__Enabled` |
 | `CROSS_CHANNEL_SPAM_TIME_WINDOW_SECONDS` | `PANDABOT_CrossChannelSpam__TimeWindowSeconds` |
