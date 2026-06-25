@@ -339,7 +339,20 @@ public class SingleMessageService
                 return true;
             }
 
+            if (!db.Database.IsRelational())
+            {
+                await db.Database.EnsureCreatedAsync();
+                _schemaInitialized = true;
+                return true;
+            }
+
             await db.Database.MigrateAsync();
+
+            if (!db.Database.IsSqlite())
+            {
+                _schemaInitialized = true;
+                return true;
+            }
 
             var hasChannelStates = await TableExistsAsync(db, "SingleMessageChannelStates");
             var hasRecords = await TableExistsAsync(db, "SingleMessageRecords");
@@ -361,7 +374,7 @@ public class SingleMessageService
             _schemaInitialized = true;
             return true;
         }
-        catch (SqliteException ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to initialize SingleMessage database schema");
             return false;
