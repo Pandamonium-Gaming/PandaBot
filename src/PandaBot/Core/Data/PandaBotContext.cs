@@ -1,3 +1,4 @@
+using DiscordBot.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using PandaBot.Core.Models;
@@ -25,6 +26,8 @@ public class PandaBotContext : DbContext
     public DbSet<VehicleCache> UexVehicleCache { get; set; }
     public DbSet<SingleMessageChannelState> SingleMessageChannelStates { get; set; }
     public DbSet<SingleMessageRecord> SingleMessageRecords { get; set; }
+    public DbSet<UserWarning> UserWarnings => Set<UserWarning>();
+    public DbSet<ModLogThreadLink> ModLogThreadLinks => Set<ModLogThreadLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -150,6 +153,21 @@ public class PandaBotContext : DbContext
                 .HasForeignKey(x => x.ChannelId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.Property(x => x.PostedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        modelBuilder.Entity<UserWarning>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.GuildId, x.UserId });
+            entity.Property(x => x.Reason).IsRequired();
+            entity.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        modelBuilder.Entity<ModLogThreadLink>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.GuildId, x.UserId }).IsUnique();
+            entity.Property(x => x.LastUsedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
     }
 }
