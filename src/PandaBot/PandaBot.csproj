@@ -5,7 +5,7 @@
     <AssemblyName>PandaBot</AssemblyName>
     <OutputType>Exe</OutputType>
     <UserSecretsId>ca866cec-4adc-4fb2-b01f-ffc1982d3939</UserSecretsId>
-    <Version>1.7.2</Version>
+    <Version>1.8.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -57,4 +57,5 @@
   </Target>
 
 </Project>
+
 
