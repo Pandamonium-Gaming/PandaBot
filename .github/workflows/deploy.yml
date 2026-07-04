@@ -159,6 +159,11 @@ jobs:
         PANDABOT_ModerationExemptions__ExemptUserIds__0=${{ secrets.MODERATION_EXEMPT_USER_ID_0 || '' }}
           PANDABOT_CrossChannelSpam__DeleteMessages=${{ secrets.CROSS_CHANNEL_SPAM_DELETE_MESSAGES || 'true' }}
           PANDABOT_CrossChannelSpam__TimeoutOnDetection=${{ secrets.CROSS_CHANNEL_SPAM_TIMEOUT_ON_DETECTION || 'true' }}
+        PANDABOT_AllCapsModeration__Enabled=${{ secrets.ALL_CAPS_MODERATION_ENABLED || 'true' }}
+        PANDABOT_AllCapsModeration__DeleteMessage=${{ secrets.ALL_CAPS_MODERATION_DELETE_MESSAGE || 'true' }}
+        PANDABOT_AllCapsModeration__MinLetters=${{ secrets.ALL_CAPS_MODERATION_MIN_LETTERS || '8' }}
+        PANDABOT_AllCapsModeration__MinUppercaseRatio=${{ secrets.ALL_CAPS_MODERATION_MIN_UPPERCASE_RATIO || '0.7' }}
+        PANDABOT_AllCapsModeration__WarningDurationSeconds=${{ secrets.ALL_CAPS_MODERATION_WARNING_DURATION_SECONDS || '10' }}
         PANDABOT_ModerationExemptions__ExemptRoleIds__0=${{ secrets.MODERATION_EXEMPT_ROLE_ID_0 || '' }}
         PANDABOT_CommandAccess__DisableAllFunCommands=${{ secrets.COMMAND_ACCESS_DISABLE_ALL_FUN_COMMANDS || 'false' }}
         PANDABOT_CommandAccess__DisabledCommands__0=${{ secrets.COMMAND_ACCESS_DISABLED_COMMAND_0 || '' }}

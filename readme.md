@@ -46,7 +46,11 @@ All moderation actions are logged as rich embeds to a Discord forum channel. Eac
 
 Detects users who send identical messages across multiple channels within a configurable time window. When triggered, a spam alert is posted to the moderation log forum channel with **Ban** and **Dismiss** buttons for moderators. Configure via the `CrossChannelSpam` root-level config section.
 
-> **Note:** Both features require the **Message Content** privileged intent to be enabled in the [Discord Developer Portal](https://discord.com/developers/applications). Restart the bot after enabling it — no token refresh is required.
+### All-Caps Auto-Moderation
+
+Detects messages that are mostly uppercase, deletes them, warns the author via a self-deleting channel message and a DM, records a strike toward the same 3-strike `/warn` counter, and logs the incident to the user's moderation log thread. Configure via the `AllCapsModeration` root-level config section.
+
+> **Note:** Cross-Channel Spam Detection and All-Caps Auto-Moderation both require the **Message Content** privileged intent to be enabled in the [Discord Developer Portal](https://discord.com/developers/applications). Restart the bot after enabling it — no token refresh is required.
 
 ## Development
 
@@ -199,6 +203,31 @@ set PANDABOT_CrossChannelSpam__TimeWindowSeconds=30
 set PANDABOT_CrossChannelSpam__MinimumChannelCount=3
 set PANDABOT_CrossChannelSpam__DeleteMessages=true
 set PANDABOT_CrossChannelSpam__TimeoutOnDetection=true
+```
+
+#### All-Caps Moderation Configuration
+
+```bash
+# Linux/Mac
+export PANDABOT_AllCapsModeration__Enabled=true
+export PANDABOT_AllCapsModeration__DeleteMessage=true
+export PANDABOT_AllCapsModeration__MinLetters=8
+export PANDABOT_AllCapsModeration__MinUppercaseRatio=0.7
+export PANDABOT_AllCapsModeration__WarningDurationSeconds=10
+
+# Windows PowerShell
+$env:PANDABOT_AllCapsModeration__Enabled="true"
+$env:PANDABOT_AllCapsModeration__DeleteMessage="true"
+$env:PANDABOT_AllCapsModeration__MinLetters="8"
+$env:PANDABOT_AllCapsModeration__MinUppercaseRatio="0.7"
+$env:PANDABOT_AllCapsModeration__WarningDurationSeconds="10"
+
+# Windows CMD
+set PANDABOT_AllCapsModeration__Enabled=true
+set PANDABOT_AllCapsModeration__DeleteMessage=true
+set PANDABOT_AllCapsModeration__MinLetters=8
+set PANDABOT_AllCapsModeration__MinUppercaseRatio=0.7
+set PANDABOT_AllCapsModeration__WarningDurationSeconds=10
 ```
 
 #### Moderation Exemptions Configuration
@@ -361,6 +390,11 @@ This repository uses `.github/workflows/dotnet.yml` for CI and `.github/workflow
 | `CROSS_CHANNEL_SPAM_MINIMUM_CHANNEL_COUNT` | `PANDABOT_CrossChannelSpam__MinimumChannelCount` |
 | `CROSS_CHANNEL_SPAM_DELETE_MESSAGES` | `PANDABOT_CrossChannelSpam__DeleteMessages` |
 | `CROSS_CHANNEL_SPAM_TIMEOUT_ON_DETECTION` | `PANDABOT_CrossChannelSpam__TimeoutOnDetection` |
+| `ALL_CAPS_MODERATION_ENABLED` | `PANDABOT_AllCapsModeration__Enabled` |
+| `ALL_CAPS_MODERATION_DELETE_MESSAGE` | `PANDABOT_AllCapsModeration__DeleteMessage` |
+| `ALL_CAPS_MODERATION_MIN_LETTERS` | `PANDABOT_AllCapsModeration__MinLetters` |
+| `ALL_CAPS_MODERATION_MIN_UPPERCASE_RATIO` | `PANDABOT_AllCapsModeration__MinUppercaseRatio` |
+| `ALL_CAPS_MODERATION_WARNING_DURATION_SECONDS` | `PANDABOT_AllCapsModeration__WarningDurationSeconds` |
 | `MODERATION_EXEMPT_USER_ID_0` | `PANDABOT_ModerationExemptions__ExemptUserIds__0` |
 | `MODERATION_EXEMPT_ROLE_ID_0` | `PANDABOT_ModerationExemptions__ExemptRoleIds__0` |
 | `COMMAND_ACCESS_DISABLE_ALL_FUN_COMMANDS` | `PANDABOT_CommandAccess__DisableAllFunCommands` |
@@ -398,6 +432,8 @@ All moderation actions are logged as rich embeds to a Discord forum channel. Eac
 
 > **Note:** `ModerationLog` is a root-level config section, not nested under `Discord`.
 
+The bot reuses one forum thread per user instead of creating a new thread for every action: it first checks for a previously linked thread, then falls back to scanning existing thread titles for an exact `[userId]` tag or a fuzzy username match (auto-renaming and posting a confirmation note if linked this way) before creating a new thread as a last resort.
+
 * `ForumChannelId` (ulong): Forum channel ID where moderation log threads are created (`0` = disabled)
 * `ModeratorRoleId` (ulong): Optional role to mention in log posts (`0` = no mention)
 
@@ -412,6 +448,18 @@ Detects users who send identical messages across multiple channels within a shor
 * `MinimumChannelCount` (int): Minimum number of distinct channels before a detection fires (default: `3`)
 * `DeleteMessages` (bool): Delete detected spam messages — requires Manage Messages (default: `true`)
 * `TimeoutOnDetection` (bool): Apply a 28-day timeout to the spammer — requires Moderate Members (default: `true`)
+
+### AllCapsModeration Section
+
+Detects messages that are mostly uppercase, deletes them, warns the author via a self-deleting channel message and a DM, records a strike toward the same 3-strike `/warn` counter, and logs the incident to the user's moderation log thread.
+
+> **Note:** `AllCapsModeration` is a root-level config section, not nested under `Discord`.
+
+* `Enabled` (bool): Enable all-caps detection (default: `true`)
+* `DeleteMessage` (bool): Delete the offending message — requires Manage Messages (default: `true`)
+* `MinLetters` (int): Minimum letter count (non-letters excluded) before a message is considered (default: `8`)
+* `MinUppercaseRatio` (double): Fraction of letters that must be uppercase to trigger (default: `0.7`)
+* `WarningDurationSeconds` (int): How long the self-deleting channel warning stays visible (default: `10`)
 
 ### SingleMessage Section
 
