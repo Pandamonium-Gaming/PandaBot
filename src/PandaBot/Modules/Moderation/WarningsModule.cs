@@ -20,6 +20,7 @@ public class WarningsModule : InteractionModuleBase<SocketInteractionContext>
     }
 
     [SlashCommand("warnings", "View warnings of a member")]
+    [RequireUserPermission(GuildPermission.ManageMessages)]
     public async Task WarningsAsync(
         [Summary(description: "User to check warnings for")] SocketGuildUser? user = null)
     {
@@ -37,7 +38,7 @@ public class WarningsModule : InteractionModuleBase<SocketInteractionContext>
 
         var warnings = await db.UserWarnings
             .Where(w => w.GuildId == Context.Guild.Id && w.UserId == user.Id)
-            .OrderBy(w => w.CreatedAt)
+            .OrderBy(w => w.Id)
             .ToListAsync();
 
         if (warnings.Count == 0)
