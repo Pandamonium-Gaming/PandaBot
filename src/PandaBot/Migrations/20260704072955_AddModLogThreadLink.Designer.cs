@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PandaBot.Core.Data;
 
@@ -10,9 +11,11 @@ using PandaBot.Core.Data;
 namespace PandaBot.Migrations
 {
     [DbContext(typeof(PandaBotContext))]
-    partial class PandaBotContextModelSnapshot : ModelSnapshot
+    [Migration("20260704072955_AddModLogThreadLink")]
+    partial class AddModLogThreadLink
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
