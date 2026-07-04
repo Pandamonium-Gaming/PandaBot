@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Discord.Interactions;
 using DiscordBot.Models;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using System.Reflection;
 
 namespace DiscordBot.Services;
@@ -53,15 +54,35 @@ public class DiscordBotService
         _client.Disconnected += DisconnectedAsync;
         _client.InteractionCreated += HandleInteractionAsync;
         _client.GuildAvailable += GuildAvailableAsync;
-        _client.MessageReceived += _eventAuditLogService.HandleMessageReceivedAsync;
-        _client.MessageReceived += _singleMessageService.HandleMessageAsync;
-        _client.MessageReceived += _spamDetector.HandleMessageAsync;
-        _client.MessageReceived += _allCapsModerator.HandleMessageAsync;
+        _client.MessageReceived += message => RunMessageHandler(_eventAuditLogService.HandleMessageReceivedAsync, message, nameof(EventAuditLogService));
+        _client.MessageReceived += message => RunMessageHandler(_singleMessageService.HandleMessageAsync, message, nameof(SingleMessageService));
+        _client.MessageReceived += message => RunMessageHandler(_spamDetector.HandleMessageAsync, message, nameof(CrossChannelSpamDetector));
+        _client.MessageReceived += message => RunMessageHandler(_allCapsModerator.HandleMessageAsync, message, nameof(AllCapsMessageModerator));
         _client.MessageDeleted += _eventAuditLogService.HandleMessageDeletedAsync;
         _client.UserJoined += _eventAuditLogService.HandleUserJoinedAsync;
         _client.UserLeft += _eventAuditLogService.HandleUserLeftAsync;
         _interactionService.Log += LogAsync;
         _interactionService.SlashCommandExecuted += SlashCommandExecutedAsync;
+        _interactionService.ComponentCommandExecuted += ComponentCommandExecutedAsync;
+    }
+
+    // MessageReceived subscribers run sequentially and share one HandlerTimeout budget, so a slow
+    // handler (multiple Discord API calls for delete/DM/mod-log) can block the gateway's dispatch
+    // loop. Running each on its own background task keeps them independent of that shared budget.
+    private Task RunMessageHandler(Func<SocketMessage, Task> handler, SocketMessage message, string handlerName)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await handler(message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception in {Handler} MessageReceived handler", handlerName);
+            }
+        });
+        return Task.CompletedTask;
     }
 
     public async Task StartAsync()
@@ -283,17 +304,95 @@ public class DiscordBotService
         return Task.CompletedTask;
     }
 
-    private Task SlashCommandExecutedAsync(SlashCommandInfo command, IInteractionContext context, IResult result)
+    private async Task SlashCommandExecutedAsync(SlashCommandInfo command, IInteractionContext context, IResult result)
     {
         if (!result.IsSuccess)
         {
             _logger.LogError("Slash command {CommandName} failed: {Error}", command.Name, result.ErrorReason);
+            var userMessage = BuildInteractionErrorMessage(result);
+            if (context.Interaction is SocketInteraction socketInteraction)
+                await SendInteractionErrorAsync(socketInteraction, userMessage);
         }
         else
         {
             _logger.LogInformation("Slash command {CommandName} executed successfully", command.Name);
         }
-        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Called when a component (button/select menu) interaction is executed. Component command
+    /// results are not surfaced anywhere else — without this, a failing handler is caught
+    /// internally by ExecuteCommandAsync and silently discarded with no log and no user response.
+    /// </summary>
+    private async Task ComponentCommandExecutedAsync(ComponentCommandInfo command, IInteractionContext context, IResult result)
+    {
+        if (!result.IsSuccess)
+        {
+            _logger.LogError("Component command {CommandName} failed: {Error}", command.Name, result.ErrorReason);
+            var userMessage = BuildInteractionErrorMessage(result);
+            if (context.Interaction is SocketInteraction socketInteraction)
+                await SendInteractionErrorAsync(socketInteraction, userMessage);
+        }
+        else
+        {
+            _logger.LogInformation("Component command {CommandName} executed successfully", command.Name);
+        }
+    }
+
+    private async Task SendInteractionErrorAsync(SocketInteraction interaction, string message)
+    {
+        try
+        {
+            if (interaction.HasResponded)
+                await interaction.FollowupAsync(message, ephemeral: true);
+            else
+                await interaction.RespondAsync(message, ephemeral: true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send interaction error message to user.");
+        }
+    }
+
+    private static string BuildInteractionErrorMessage(IResult result)
+    {
+        if (result.Error == InteractionCommandError.UnmetPrecondition)
+        {
+            var reason = (result.ErrorReason ?? string.Empty).Trim();
+
+            if (reason.Contains("too quickly", StringComparison.OrdinalIgnoreCase) ||
+                reason.Contains("cooldown", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"⏱️ {reason}";
+            }
+
+            var normalized = reason.ToLower(CultureInfo.InvariantCulture);
+
+            if (normalized.Contains("permission") || normalized.Contains("manage") || normalized.Contains("administrator"))
+            {
+                if (string.IsNullOrWhiteSpace(reason))
+                {
+                    return "❌ This command couldn't run because of missing permissions for you or the bot in this channel/server.";
+                }
+
+                return
+                    "❌ This command couldn't run because of missing permissions for you or the bot in this channel/server." +
+                    $"\nℹ️ Details: {reason}";
+            }
+
+            return $"❌ Command requirements not met: {reason}";
+        }
+
+        if (result.Error == InteractionCommandError.UnknownCommand)
+            return "❌ I couldn't find that command. Please try again in a moment.";
+
+        if (result.Error == InteractionCommandError.BadArgs)
+            return "❌ Invalid command arguments. Please check the command options and try again.";
+
+        if (result.Error == InteractionCommandError.Exception)
+            return "❌ Something went wrong while running that command.";
+
+        return $"❌ Command failed: {result.ErrorReason}";
     }
 
     private async Task HandleInteractionAsync(SocketInteraction interaction)
@@ -325,12 +424,10 @@ public class DiscordBotService
             _logger.LogInformation("[{Time}] About to execute command (processing delay: {Delay}ms)", 
                 beforeExecute.ToString("HH:mm:ss.fff"), (beforeExecute - receivedTime).TotalMilliseconds);
             
-            var result = await _interactionService.ExecuteCommandAsync(ctx, _services);
-            
-            if (!result.IsSuccess)
-            {
-                _logger.LogError("Command execution failed: {Error}", result.ErrorReason);
-            }
+            await _interactionService.ExecuteCommandAsync(ctx, _services);
+
+            // Slash command and component command results (including precondition failures) are
+            // handled in SlashCommandExecutedAsync/ComponentCommandExecutedAsync via their events.
         }
         catch (Exception ex)
         {
