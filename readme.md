@@ -212,21 +212,30 @@ set PANDABOT_CrossChannelSpam__TimeoutOnDetection=true
 export PANDABOT_AllCapsModeration__Enabled=true
 export PANDABOT_AllCapsModeration__DeleteMessage=true
 export PANDABOT_AllCapsModeration__MinLetters=8
-export PANDABOT_AllCapsModeration__MinUppercaseRatio=0.7
+export PANDABOT_AllCapsModeration__MinUppercaseRatio=0.8
+export PANDABOT_AllCapsModeration__EnableLengthScaling=true
+export PANDABOT_AllCapsModeration__UppercaseRatioDropPerLetter=0.01
+export PANDABOT_AllCapsModeration__MinScaledUppercaseRatio=0.4
 export PANDABOT_AllCapsModeration__WarningDurationSeconds=10
 
 # Windows PowerShell
 $env:PANDABOT_AllCapsModeration__Enabled="true"
 $env:PANDABOT_AllCapsModeration__DeleteMessage="true"
 $env:PANDABOT_AllCapsModeration__MinLetters="8"
-$env:PANDABOT_AllCapsModeration__MinUppercaseRatio="0.7"
+$env:PANDABOT_AllCapsModeration__MinUppercaseRatio="0.8"
+$env:PANDABOT_AllCapsModeration__EnableLengthScaling="true"
+$env:PANDABOT_AllCapsModeration__UppercaseRatioDropPerLetter="0.01"
+$env:PANDABOT_AllCapsModeration__MinScaledUppercaseRatio="0.4"
 $env:PANDABOT_AllCapsModeration__WarningDurationSeconds="10"
 
 # Windows CMD
 set PANDABOT_AllCapsModeration__Enabled=true
 set PANDABOT_AllCapsModeration__DeleteMessage=true
 set PANDABOT_AllCapsModeration__MinLetters=8
-set PANDABOT_AllCapsModeration__MinUppercaseRatio=0.7
+set PANDABOT_AllCapsModeration__MinUppercaseRatio=0.8
+set PANDABOT_AllCapsModeration__EnableLengthScaling=true
+set PANDABOT_AllCapsModeration__UppercaseRatioDropPerLetter=0.01
+set PANDABOT_AllCapsModeration__MinScaledUppercaseRatio=0.4
 set PANDABOT_AllCapsModeration__WarningDurationSeconds=10
 ```
 
@@ -394,7 +403,13 @@ This repository uses `.github/workflows/dotnet.yml` for CI and `.github/workflow
 | `ALL_CAPS_MODERATION_DELETE_MESSAGE` | `PANDABOT_AllCapsModeration__DeleteMessage` |
 | `ALL_CAPS_MODERATION_MIN_LETTERS` | `PANDABOT_AllCapsModeration__MinLetters` |
 | `ALL_CAPS_MODERATION_MIN_UPPERCASE_RATIO` | `PANDABOT_AllCapsModeration__MinUppercaseRatio` |
+| `ALL_CAPS_MODERATION_ENABLE_LENGTH_SCALING` | `PANDABOT_AllCapsModeration__EnableLengthScaling` |
+| `ALL_CAPS_MODERATION_UPPERCASE_RATIO_DROP_PER_LETTER` | `PANDABOT_AllCapsModeration__UppercaseRatioDropPerLetter` |
+| `ALL_CAPS_MODERATION_MIN_SCALED_UPPERCASE_RATIO` | `PANDABOT_AllCapsModeration__MinScaledUppercaseRatio` |
 | `ALL_CAPS_MODERATION_WARNING_DURATION_SECONDS` | `PANDABOT_AllCapsModeration__WarningDurationSeconds` |
+
+The bot now uses a DB-backed acronym allowlist to exempt known acronyms instead of a blanket short-message exemption. Manage entries with `/acronyms add`, `/acronyms remove`, and `/acronyms list`.
+The default seed includes common English chat acronyms, Welsh/Wales community acronyms, and common IT/technical acronyms.
 | `MODERATION_EXEMPT_USER_ID_0` | `PANDABOT_ModerationExemptions__ExemptUserIds__0` |
 | `MODERATION_EXEMPT_ROLE_ID_0` | `PANDABOT_ModerationExemptions__ExemptRoleIds__0` |
 | `COMMAND_ACCESS_DISABLE_ALL_FUN_COMMANDS` | `PANDABOT_CommandAccess__DisableAllFunCommands` |
