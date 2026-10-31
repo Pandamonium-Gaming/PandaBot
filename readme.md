@@ -169,15 +169,15 @@ set PANDABOT_AshesForge__EnableImageCaching=true
 ```bash
 # Linux/Mac
 export PANDABOT_ModerationLog__ForumChannelId=1234567890
-export PANDABOT_ModerationLog__ModeratorRoleId=1234567890
+export PANDABOT_ModerationLog__ModeratorRoleId=1234567890,2345678901
 
 # Windows PowerShell
 $env:PANDABOT_ModerationLog__ForumChannelId="1234567890"
-$env:PANDABOT_ModerationLog__ModeratorRoleId="1234567890"
+$env:PANDABOT_ModerationLog__ModeratorRoleId="1234567890,2345678901"
 
 # Windows CMD
 set PANDABOT_ModerationLog__ForumChannelId=1234567890
-set PANDABOT_ModerationLog__ModeratorRoleId=1234567890
+set PANDABOT_ModerationLog__ModeratorRoleId=1234567890,2345678901
 ```
 
 #### Cross-Channel Spam Configuration
@@ -450,7 +450,9 @@ All moderation actions are logged as rich embeds to a Discord forum channel. Eac
 The bot reuses one forum thread per user instead of creating a new thread for every action: it first checks for a previously linked thread, then falls back to scanning existing thread titles for an exact `[userId]` tag or a fuzzy username match (auto-renaming and posting a confirmation note if linked this way) before creating a new thread as a last resort.
 
 * `ForumChannelId` (ulong): Forum channel ID where moderation log threads are created (`0` = disabled)
-* `ModeratorRoleId` (ulong): Optional role to mention in log posts (`0` = no mention)
+* `ModeratorRoleId` (string): Optional comma-separated role IDs in log embed footers (`0` = none). Existing single numeric IDs still work.
+
+Keep using the `MODERATION_LOG_MODERATOR_ROLE_ID` secret and `ModerationLog:ModeratorRoleId` setting: to add roles, set the value to `1234567890,2345678901`. In JSON, quote comma-separated lists; existing numeric values need no changes. Surrounding whitespace is trimmed, duplicates are removed, and zero IDs are ignored. Empty entries, invalid IDs, or lists exceeding Discord's 2,048-character footer limit cause an explicit startup error. Restart or redeploy after changing the value. Footer role text does not ping roles or grant moderator permissions.
 
 ### CrossChannelSpam Section
 
